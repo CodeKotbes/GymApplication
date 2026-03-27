@@ -97,24 +97,41 @@ object FullBackupManager {
 
     fun restoreBackup(context: Context, uri: Uri) {
         try {
+            com.example.gymapplication.data.GymDatabase.getDatabase(context).close()
+
+            context.deleteDatabase("gym_database")
+
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 ZipInputStream(inputStream).use { zis ->
                     var entry = zis.nextEntry
                     while (entry != null) {
-                        val targetFile = if (entry.name.startsWith("database/")) {
-                            val fileName = entry.name.removePrefix("database/")
-                            context.getDatabasePath(fileName)
-                        } else if (entry.name.startsWith("images/")) {
-                            val fileName = entry.name.removePrefix("images/")
-                            File(context.filesDir, fileName)
-                        } else null
-
-                        targetFile?.let {
-                            it.parentFile?.mkdirs()
-                            if (it.exists()) it.delete()
-
-                            FileOutputStream(it).use { fos -> zis.copyTo(fos) }
+                        // Ignoriere Ordner-Einträge in der Zip
+                        if (entry.isDirectory) {
+                            zis.closeEntry()
+                            entry = zis.nextEntry
+                            continue
                         }
+
+                        // Macht den Import abwärtskompatibel zu V13: Ignoriert Ordnerpfade im Zip!
+                        val pureFileName = entry.name.substringAfterLast("/")
+
+                        val targetFile = if (pureFileName.startsWith("gym_database")) {
+                            // Erkennt gym_database, gym_database-wal, gym_database-shm
+                            context.getDatabasePath(pureFileName)
+                        } else if (pureFileName.endsWith(".jpg") || pureFileName.endsWith(".png")) {
+                            // Erkennt alle Bilder, egal wo sie im Zip lagen
+                            File(context.filesDir, pureFileName)
+                        } else {
+                            null
+                        }
+
+                        targetFile?.let { file ->
+                            file.parentFile?.mkdirs()
+                            if (file.exists()) file.delete()
+
+                            FileOutputStream(file).use { fos -> zis.copyTo(fos) }
+                        }
+
                         zis.closeEntry()
                         entry = zis.nextEntry
                     }
@@ -131,7 +148,7 @@ object FullBackupManager {
 
         } catch (e: Exception) {
             e.printStackTrace()
-            android.widget.Toast.makeText(context, "Fehler beim Import!", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, "Fehler beim Import: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
         }
     }
 }
