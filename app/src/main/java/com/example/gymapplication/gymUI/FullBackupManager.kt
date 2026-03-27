@@ -111,6 +111,8 @@ object FullBackupManager {
 
                         targetFile?.let {
                             it.parentFile?.mkdirs()
+                            if (it.exists()) it.delete()
+
                             FileOutputStream(it).use { fos -> zis.copyTo(fos) }
                         }
                         zis.closeEntry()
@@ -118,8 +120,18 @@ object FullBackupManager {
                     }
                 }
             }
+
+            android.widget.Toast.makeText(context, "Backup importiert! App startet neu...", android.widget.Toast.LENGTH_LONG).show()
+
+            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+            handler.postDelayed({
+                android.os.Process.killProcess(android.os.Process.myPid())
+                System.exit(0)
+            }, 1000)
+
         } catch (e: Exception) {
             e.printStackTrace()
+            android.widget.Toast.makeText(context, "Fehler beim Import!", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 }
