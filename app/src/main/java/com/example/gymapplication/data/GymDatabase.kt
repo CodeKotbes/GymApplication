@@ -39,8 +39,8 @@ abstract class GymDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE workout_sessions ADD COLUMN durationInSeconds INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE equipment_table ADD COLUMN generalNote TEXT DEFAULT NULL")
                 db.execSQL("ALTER TABLE equipment_table ADD COLUMN generalNoteImageUris TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE workout_logs ADD COLUMN sessionNote TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE workout_logs ADD COLUMN sessionNoteImageUris TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE workout_log_table ADD COLUMN sessionNote TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE workout_log_table ADD COLUMN sessionNoteImageUris TEXT DEFAULT NULL")
             }
         }
 
