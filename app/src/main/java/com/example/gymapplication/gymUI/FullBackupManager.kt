@@ -102,25 +102,21 @@ object FullBackupManager {
             context.deleteDatabase("gym_database")
 
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                ZipInputStream(inputStream).use { zis ->
+                java.util.zip.ZipInputStream(inputStream).use { zis ->
                     var entry = zis.nextEntry
                     while (entry != null) {
-                        // Ignoriere Ordner-Einträge in der Zip
                         if (entry.isDirectory) {
                             zis.closeEntry()
                             entry = zis.nextEntry
                             continue
                         }
 
-                        // Macht den Import abwärtskompatibel zu V13: Ignoriert Ordnerpfade im Zip!
                         val pureFileName = entry.name.substringAfterLast("/")
 
                         val targetFile = if (pureFileName.startsWith("gym_database")) {
-                            // Erkennt gym_database, gym_database-wal, gym_database-shm
                             context.getDatabasePath(pureFileName)
                         } else if (pureFileName.endsWith(".jpg") || pureFileName.endsWith(".png")) {
-                            // Erkennt alle Bilder, egal wo sie im Zip lagen
-                            File(context.filesDir, pureFileName)
+                            java.io.File(context.filesDir, pureFileName)
                         } else {
                             null
                         }
@@ -129,7 +125,7 @@ object FullBackupManager {
                             file.parentFile?.mkdirs()
                             if (file.exists()) file.delete()
 
-                            FileOutputStream(file).use { fos -> zis.copyTo(fos) }
+                            java.io.FileOutputStream(file).use { fos -> zis.copyTo(fos) }
                         }
 
                         zis.closeEntry()
@@ -138,17 +134,19 @@ object FullBackupManager {
                 }
             }
 
-            android.widget.Toast.makeText(context, "Backup importiert! App startet neu...", android.widget.Toast.LENGTH_LONG).show()
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, "Backup importiert! App startet neu...", android.widget.Toast.LENGTH_LONG).show()
 
-            val handler = android.os.Handler(android.os.Looper.getMainLooper())
-            handler.postDelayed({
-                android.os.Process.killProcess(android.os.Process.myPid())
-                System.exit(0)
-            }, 1000)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    android.os.Process.killProcess(android.os.Process.myPid())
+                    System.exit(0)
+                }, 1500)
+            }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            android.widget.Toast.makeText(context, "Fehler beim Import: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+
+            throw e
         }
     }
 }
