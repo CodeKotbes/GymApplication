@@ -1,5 +1,6 @@
 package com.example.gymapplication.gymUI
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -36,6 +37,123 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+
+@Composable
+fun ProgressDashboardCard(
+    title: String,
+    unit: String,
+    startValue: Float?,
+    currentValue: Float?,
+    previousValue: Float?,
+    targetValue: Float?,
+    onSetTargetClick: () -> Unit,
+    isLowerBetter: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        // GEFIXT: Hier war vorher surfaceVariant. Jetzt ist es surface, damit es zum Rest passt!
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("START", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (startValue != null) "$startValue $unit" else "-",
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("AKTUELL", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (currentValue != null) "$currentValue $unit" else "-",
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { onSetTargetClick() }) {
+                    Text("ZIEL 🎯", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (targetValue != null) "$targetValue $unit" else "Setzen",
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+
+            if (targetValue != null && startValue != null && currentValue != null && startValue != targetValue) {
+                Spacer(modifier = Modifier.height(16.dp))
+                val totalDiff = targetValue - startValue
+                val currentDiff = currentValue - startValue
+                val rawProgress = currentDiff / totalDiff
+                val progress = rawProgress.coerceIn(0f, 1f)
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(MaterialTheme.shapes.medium),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                )
+                Text(
+                    "${(progress * 100).toInt()}% erreicht",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 4.dp)
+                )
+            }
+
+            if (currentValue != null && previousValue != null) {
+                val diff = currentValue - previousValue
+                if (abs(diff) >= 0.1f) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val isGood = if (isLowerBetter) diff < 0 else diff > 0
+                    val color = if (isGood) Color(0xFF4CAF50) else Color(0xFFF44336)
+                    val icon = if (diff > 0) "▲" else "▼"
+                    val prefix = if (diff > 0) "+" else ""
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Veränderung zum letzten Mal: ",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "$prefix${
+                                String.format(
+                                    Locale.getDefault(),
+                                    "%.1f",
+                                    diff
+                                )
+                            } $unit $icon", color = color, fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,14 +165,26 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var showAddDialog by remember { mutableStateOf(false) }
+    val sharedPrefs = context.getSharedPreferences("gym_targets", Context.MODE_PRIVATE)
+    var targetValue by remember { mutableStateOf<Float?>(null) }
+    var showTargetDialog by rememberSaveable { mutableStateOf(false) }
+    var targetInput by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(type) {
+        val saved = sharedPrefs.getFloat("target_body_$type", -1f)
+        if (saved != -1f) targetValue = saved
+    }
+
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var metricToEdit by remember { mutableStateOf<BodyMetric?>(null) }
-    var inputValue by remember { mutableStateOf("") }
-    var selectedDateMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var metricToDelete by remember { mutableStateOf<BodyMetric?>(null) }
+
+    var inputValue by rememberSaveable { mutableStateOf("") }
+    var selectedDateMillis by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
 
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var fullscreenImageUri by remember { mutableStateOf<String?>(null) }
-    var showFullscreenGraph by remember { mutableStateOf(false) }
+    var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var showFullscreenGraph by rememberSaveable { mutableStateOf(false) }
 
     var tempCameraUriString by rememberSaveable { mutableStateOf<String?>(null) }
     val tempCameraUri = tempCameraUriString?.let { Uri.parse(it) }
@@ -119,15 +249,10 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
 
             if (type.contains("Gewicht", ignoreCase = true)) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "DEIN ZIEL:",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val goals = listOf("Abnehmen", "Zunehmen", "Halten")
@@ -145,7 +270,7 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (metrics.isEmpty()) {
                 Box(
@@ -160,6 +285,28 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                     )
                 }
             } else {
+                val sortedMetrics = metrics.sortedBy { it.dateMillis }
+                val startVal = sortedMetrics.first().value
+                val currentVal = sortedMetrics.last().value
+                val prevVal =
+                    if (sortedMetrics.size > 1) sortedMetrics[sortedMetrics.size - 2].value else null
+                val isLowerBetter =
+                    type.contains("Gewicht", ignoreCase = true) && currentGoal == "Abnehmen"
+
+                ProgressDashboardCard(
+                    title = "DASHBOARD",
+                    unit = unit,
+                    startValue = startVal,
+                    currentValue = currentVal,
+                    previousValue = prevVal,
+                    targetValue = targetValue,
+                    onSetTargetClick = {
+                        targetInput = targetValue?.toString() ?: ""; showTargetDialog = true
+                    },
+                    isLowerBetter = isLowerBetter
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     "ENTWICKLUNG",
                     style = MaterialTheme.typography.titleLarge,
@@ -175,7 +322,12 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                     shape = MaterialTheme.shapes.large
                 ) {
                     GenericGraph(
-                        dataPoints = metrics.map { GraphDataPoint(it.value, it.dateMillis) },
+                        dataPoints = metrics.map {
+                            GraphDataPoint(
+                                it.value,
+                                it.dateMillis
+                            )
+                        },
                         unit = unit,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -250,19 +402,54 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                                     metric.value.toString(); selectedImageUri =
                                     metric.imageUri?.let { Uri.parse(it) }; selectedDateMillis =
                                     metric.dateMillis; showAddDialog = true
-                                })
-                            DropdownMenuItem(text = {
-                                Text(
-                                    "Löschen",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }, onClick = { showMenu = false; viewModel.deleteBodyMetric(metric) })
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Löschen", color = MaterialTheme.colorScheme.error) },
+                                onClick = { showMenu = false; metricToDelete = metric }
+                            )
                         }
                     }
                 }
             }
         }
         item { Spacer(modifier = Modifier.height(120.dp)) }
+    }
+
+    if (showTargetDialog) {
+        AlertDialog(
+            onDismissRequest = { showTargetDialog = false },
+            title = { Text("ZIEL FESTLEGEN", fontWeight = FontWeight.Black) },
+            text = {
+                OutlinedTextField(
+                    value = targetInput,
+                    onValueChange = { targetInput = it },
+                    label = { Text("Zielwert in $unit") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = MaterialTheme.shapes.medium,
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    keyboardController?.hide()
+                    val floatVal = targetInput.replace(",", ".").toFloatOrNull()
+                    if (floatVal != null) {
+                        sharedPrefs.edit().putFloat("target_body_$type", floatVal).apply()
+                        targetValue = floatVal
+                    } else if (targetInput.isBlank()) {
+                        sharedPrefs.edit().remove("target_body_$type").apply()
+                        targetValue = null
+                    }
+                    showTargetDialog = false
+                }, shape = MaterialTheme.shapes.medium) { Text("SPEICHERN") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showTargetDialog = false
+                }) { Text("ABBRECHEN") }
+            }
+        )
     }
 
     if (showFullscreenGraph) {
@@ -322,6 +509,7 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                             }", color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+
                     if (selectedImageUri != null) {
                         Column {
                             AsyncImage(
@@ -344,27 +532,24 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            OutlinedButton(
-                                onClick = {
-                                    try {
-                                        val photoFile = context.createImageFile()
-                                        val photoUri = FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.fileprovider",
-                                            photoFile
-                                        )
-                                        tempCameraUriString = photoUri.toString()
-                                        cameraLauncher.launch(photoUri)
-                                    } catch (e: Exception) {
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "Fehler: ${e.message}",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                },
-                                shape = MaterialTheme.shapes.medium
-                            ) { Text("KAMERA") }
+                            OutlinedButton(onClick = {
+                                try {
+                                    val photoFile = context.createImageFile()
+                                    val photoUri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        photoFile
+                                    )
+                                    tempCameraUriString = photoUri.toString()
+                                    cameraLauncher.launch(photoUri)
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Fehler: ${e.message}",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }, shape = MaterialTheme.shapes.medium) { Text("KAMERA") }
                             OutlinedButton(onClick = {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -401,6 +586,27 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
             }
         )
     }
+
+    if (metricToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { metricToDelete = null },
+            title = { Text("EINTRAG LÖSCHEN?", fontWeight = FontWeight.Black) },
+            text = { Text("Möchtest du diesen Eintrag wirklich löschen?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteBodyMetric(metricToDelete!!); metricToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("LÖSCHEN") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    metricToDelete = null
+                }) { Text("ABBRECHEN") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -410,11 +616,24 @@ fun HistoryDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack: (
     val dateFormat = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val context = LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("gym_targets", Context.MODE_PRIVATE)
+    var targetValue by remember { mutableStateOf<Float?>(null) }
+    var showTargetDialog by rememberSaveable { mutableStateOf(false) }
+    var targetInput by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(equipment.id) {
+        val saved = sharedPrefs.getFloat("target_eq_${equipment.id}", -1f)
+        if (saved != -1f) targetValue = saved
+    }
+
     var logToEdit by remember { mutableStateOf<WorkoutLog?>(null) }
-    var editLogWeight by remember { mutableStateOf("") }
-    var editLogReps by remember { mutableStateOf("") }
-    var showFullscreenGraph by remember { mutableStateOf(false) }
-    var fullscreenImageUri by remember { mutableStateOf<String?>(null) }
+    var logToDelete by remember { mutableStateOf<WorkoutLog?>(null) }
+
+    var editLogWeight by rememberSaveable { mutableStateOf("") }
+    var editLogReps by rememberSaveable { mutableStateOf("") }
+    var showFullscreenGraph by rememberSaveable { mutableStateOf(false) }
+    var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
 
     if (fullscreenImageUri != null) {
         HistoryZoomDialog(imageUri = fullscreenImageUri!!) { fullscreenImageUri = null }
@@ -465,6 +684,34 @@ fun HistoryDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack: (
                     contentAlignment = Alignment.Center
                 ) { Text("Keine Einträge.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
+                val dailyMaxWeights = logs.groupBy {
+                    SimpleDateFormat(
+                        "yyyyMMdd",
+                        Locale.getDefault()
+                    ).format(Date(it.dateMillis))
+                }
+                    .values.map { dayLogs -> dayLogs.maxByOrNull { it.weight }!! }
+                    .sortedBy { it.dateMillis }
+
+                val startVal = dailyMaxWeights.firstOrNull()?.weight
+                val currentVal = dailyMaxWeights.lastOrNull()?.weight
+                val prevVal =
+                    if (dailyMaxWeights.size > 1) dailyMaxWeights[dailyMaxWeights.size - 2].weight else null
+
+                ProgressDashboardCard(
+                    title = "KRAFT-DASHBOARD",
+                    unit = "kg",
+                    startValue = startVal,
+                    currentValue = currentVal,
+                    previousValue = prevVal,
+                    targetValue = targetValue,
+                    onSetTargetClick = {
+                        targetInput = targetValue?.toString() ?: ""; showTargetDialog = true
+                    },
+                    isLowerBetter = false
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     "ENTWICKLUNG",
                     style = MaterialTheme.typography.titleLarge,
@@ -544,13 +791,49 @@ fun HistoryDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack: (
                                     "Löschen",
                                     color = MaterialTheme.colorScheme.error
                                 )
-                            }, onClick = { showMenu = false; viewModel.deleteWorkoutLog(log) })
+                            }, onClick = { showMenu = false; logToDelete = log })
                         }
                     }
                 }
             }
         }
         item { Spacer(modifier = Modifier.height(120.dp)) }
+    }
+
+    if (showTargetDialog) {
+        AlertDialog(
+            onDismissRequest = { showTargetDialog = false },
+            title = { Text("ZIEL FESTLEGEN", fontWeight = FontWeight.Black) },
+            text = {
+                OutlinedTextField(
+                    value = targetInput,
+                    onValueChange = { targetInput = it },
+                    label = { Text("Zielwert in kg") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = MaterialTheme.shapes.medium,
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    keyboardController?.hide()
+                    val floatVal = targetInput.replace(",", ".").toFloatOrNull()
+                    if (floatVal != null) {
+                        sharedPrefs.edit().putFloat("target_eq_${equipment.id}", floatVal).apply()
+                        targetValue = floatVal
+                    } else if (targetInput.isBlank()) {
+                        sharedPrefs.edit().remove("target_eq_${equipment.id}").apply()
+                        targetValue = null
+                    }
+                    showTargetDialog = false
+                }, shape = MaterialTheme.shapes.medium) { Text("SPEICHERN") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showTargetDialog = false
+                }) { Text("ABBRECHEN") }
+            }
+        )
     }
 
     if (showFullscreenGraph) FullscreenGraphDialog(dataPoints = logs.map {
@@ -600,6 +883,21 @@ fun HistoryDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack: (
                 }, shape = MaterialTheme.shapes.medium) { Text("UPDATE") }
             },
             dismissButton = { TextButton(onClick = { logToEdit = null }) { Text("ABBRECHEN") } }
+        )
+    }
+
+    if (logToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { logToDelete = null },
+            title = { Text("SATZ LÖSCHEN?", fontWeight = FontWeight.Black) },
+            text = { Text("Möchtest du diesen Satz wirklich entfernen?") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.deleteWorkoutLog(logToDelete!!); logToDelete = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("LÖSCHEN") }
+            },
+            dismissButton = { TextButton(onClick = { logToDelete = null }) { Text("ABBRECHEN") } }
         )
     }
 }

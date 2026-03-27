@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,16 +34,21 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
     val logs by logsFlow.collectAsState(initial = emptyList())
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    var weightInput by remember { mutableStateOf("") }
-    var repsInput by remember { mutableStateOf("") }
-    var setsInput by remember { mutableStateOf("") }
-    var fullscreenImageUri by remember { mutableStateOf<String?>(null) }
+
+    var weightInput by rememberSaveable { mutableStateOf("") }
+    var repsInput by rememberSaveable { mutableStateOf("") }
+    var setsInput by rememberSaveable { mutableStateOf("") }
+    var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+
     var logToEdit by remember { mutableStateOf<WorkoutLog?>(null) }
-    var editLogWeight by remember { mutableStateOf("") }
-    var editLogReps by remember { mutableStateOf("") }
-    var selectedDateStr by remember { mutableStateOf<String?>(null) }
-    var groupDateToEdit by remember { mutableStateOf<String?>(null) }
+    var logToDelete by remember { mutableStateOf<WorkoutLog?>(null) } // NEU: Lösch-Bestätigung
+    var editLogWeight by rememberSaveable { mutableStateOf("") }
+    var editLogReps by rememberSaveable { mutableStateOf("") }
+
+    var selectedDateStr by rememberSaveable { mutableStateOf<String?>(null) }
+    var groupDateToEdit by rememberSaveable { mutableStateOf<String?>(null) }
+
     val groupCalendar = remember { java.util.Calendar.getInstance() }
     val groupDatePickerDialog = android.app.DatePickerDialog(
         context,
@@ -73,7 +79,7 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
     )
     groupDatePickerDialog.setOnDismissListener { groupDateToEdit = null }
 
-    var customDateMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var customDateMillis by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     val calendar = remember { java.util.Calendar.getInstance() }
     val datePickerDialog = android.app.DatePickerDialog(
         context,
@@ -118,7 +124,7 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
                             selectedDateStr = null
                         }) { Icon(Icons.Default.ArrowBack, contentDescription = "Zurück") }
                         Text(
-                            text = "TRAINING AM $selectedDateStr",
+                            "TRAINING AM $selectedDateStr",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.primary
@@ -171,8 +177,7 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
                                     onClick = {
                                         showMenu = false; logToEdit = log; editLogWeight =
                                         log.weight.toString(); editLogReps = log.reps.toString()
-                                    }
-                                )
+                                    })
                                 DropdownMenuItem(
                                     text = {
                                         Text(
@@ -180,8 +185,9 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
                                             color = MaterialTheme.colorScheme.error
                                         )
                                     },
-                                    onClick = { showMenu = false; viewModel.deleteWorkoutLog(log) }
-                                )
+                                    onClick = {
+                                        showMenu = false; logToDelete = log
+                                    }) // NEU: logToDelete setzen
                             }
                         }
                     }
@@ -349,8 +355,7 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
                                     DropdownMenuItem(
                                         text = { Text("Datum ändern") },
                                         onClick = {
-                                            showUnitMenu = false
-                                            groupDateToEdit = dateStr
+                                            showUnitMenu = false; groupDateToEdit = dateStr
                                             try {
                                                 dateFormat.parse(dateStr)
                                                     ?.let { groupCalendar.time = it }
@@ -410,5 +415,20 @@ fun EquipmentDetailScreen(equipment: Equipment, viewModel: GymViewModel, onBack:
             dismissButton = { TextButton(onClick = { logToEdit = null }) { Text("ABBRECHEN") } }
         )
     }
-}
 
+    // NEU: Lösch-Bestätigungsdialog für Sätze
+    if (logToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { logToDelete = null },
+            title = { Text("SATZ LÖSCHEN?", fontWeight = FontWeight.Black) },
+            text = { Text("Möchtest du diesen Satz wirklich entfernen?") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.deleteWorkoutLog(logToDelete!!); logToDelete = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("LÖSCHEN") }
+            },
+            dismissButton = { TextButton(onClick = { logToDelete = null }) { Text("ABBRECHEN") } }
+        )
+    }
+}

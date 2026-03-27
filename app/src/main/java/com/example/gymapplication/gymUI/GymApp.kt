@@ -136,8 +136,11 @@ fun GymApp(viewModel: GymViewModel) {
                                     selected = currentRoute == route,
                                     onClick = {
                                         navController.navigate(route) {
-                                            popUpTo(navController.graph.startDestinationId)
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
                                             launchSingleTop = true
+                                            restoreState = true
                                         }
                                     },
                                     icon = {

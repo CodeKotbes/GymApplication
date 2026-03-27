@@ -49,6 +49,7 @@ data class WorkoutSession(
     @PrimaryKey(autoGenerate = true) val sessionId: Int = 0,
     val startTimeMillis: Long,
     val endTimeMillis: Long? = null,
+    val durationInSeconds: Int = 0,
     val planId: Int? = null,
     val name: String,
     val restTimeSeconds: Int = 120,

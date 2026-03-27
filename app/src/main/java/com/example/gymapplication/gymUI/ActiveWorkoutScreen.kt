@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -218,17 +219,13 @@ fun ActiveWorkoutScreen(
                         Spacer(modifier = Modifier.height(32.dp))
 
                         key(currentIndex) {
-                            var weightInput by remember {
-                                mutableStateOf(
-                                    currentEquipment.latestWeight?.toString() ?: ""
-                                )
+                            var weightInput by rememberSaveable(currentIndex) {
+                                mutableStateOf(currentEquipment.latestWeight?.toString() ?: "")
                             }
-                            var repsInput by remember {
-                                mutableStateOf(
-                                    currentEquipment.latestReps?.toString() ?: ""
-                                )
+                            var repsInput by rememberSaveable(currentIndex) {
+                                mutableStateOf(currentEquipment.latestReps?.toString() ?: "")
                             }
-                            var isWarmup by remember { mutableStateOf(false) }
+                            var isWarmup by rememberSaveable(currentIndex) { mutableStateOf(false) }
 
                             Card(
                                 modifier = Modifier.fillMaxWidth(),

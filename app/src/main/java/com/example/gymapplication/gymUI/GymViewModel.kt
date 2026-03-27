@@ -264,8 +264,11 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
             val currentSession = _activeSession.value
 
             if (currentSession != null) {
-                val finishedSession =
-                    currentSession.copy(endTimeMillis = System.currentTimeMillis())
+                // HIER IST DER FIX: Wir schreiben die Timer-Dauer in die Datenbank!
+                val finishedSession = currentSession.copy(
+                    endTimeMillis = System.currentTimeMillis(),
+                    durationInSeconds = _workoutDuration.value.toInt()
+                )
                 dao.updateWorkoutSession(finishedSession)
 
                 val planId = currentSession.planId

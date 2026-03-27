@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,12 +50,12 @@ fun PlanDetailScreen(
     val allEquipment by viewModel.equipmentWithLatestLogs.collectAsState()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    var showMultiSelectDialog by remember { mutableStateOf(false) }
+    var showMultiSelectDialog by rememberSaveable { mutableStateOf(false) }
     var equipmentForHistory by remember { mutableStateOf<Equipment?>(null) }
-    var showStartDialog by remember { mutableStateOf(false) }
-    var fullscreenImageUri by remember { mutableStateOf<String?>(null) }
-    var showOrderDialogFor by remember { mutableStateOf<Int?>(null) }
-    var newOrderInput by remember { mutableStateOf("") }
+    var showStartDialog by rememberSaveable { mutableStateOf(false) }
+    var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var showOrderDialogFor by rememberSaveable { mutableStateOf<Int?>(null) }
+    var newOrderInput by rememberSaveable { mutableStateOf("") }
     val activeSession by viewModel.activeSession.collectAsState()
 
     if (fullscreenImageUri != null) {
@@ -374,7 +375,7 @@ fun PlanDetailScreen(
         }
 
         if (showStartDialog) {
-            var selectedRestTime by remember { mutableIntStateOf(120) }
+            var selectedRestTime by rememberSaveable { mutableIntStateOf(120) }
             AlertDialog(
                 onDismissRequest = { showStartDialog = false },
                 title = { Text("WORKOUT SETUP", fontWeight = FontWeight.Black) },

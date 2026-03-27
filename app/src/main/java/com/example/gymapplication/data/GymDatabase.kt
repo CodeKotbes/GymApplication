@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Equipment::class, WorkoutLog::class, WorkoutPlan::class, PlanExercise::class, WorkoutSession::class, PlannedWorkout::class, BodyMetric::class],
-    version = 15,
+    version = 16, // WICHTIG: Version auf 16 erhöht!
     exportSchema = false
 )
 abstract class GymDatabase : RoomDatabase() {
@@ -34,6 +34,14 @@ abstract class GymDatabase : RoomDatabase() {
             }
         }
 
+        // NEU: Migration von 15 auf 16 (Feld für die Workout-Dauer hinzugefügt)
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Hängt die neue Spalte an die bestehende Tabelle an. Default 0, da bestehende Workouts 0 Sekunden Dauer haben.
+                db.execSQL("ALTER TABLE workout_sessions ADD COLUMN durationInSeconds INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): GymDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -41,7 +49,8 @@ abstract class GymDatabase : RoomDatabase() {
                     GymDatabase::class.java,
                     "gym_database"
                 )
-                    .addMigrations(MIGRATION_13_14, MIGRATION_14_15)
+                    // NEU: MIGRATION_15_16 am Ende der Liste hinzugefügt
+                    .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
