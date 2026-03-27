@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -57,6 +58,7 @@ fun PlanDetailScreen(
     var showOrderDialogFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var newOrderInput by rememberSaveable { mutableStateOf("") }
     val activeSession by viewModel.activeSession.collectAsState()
+    var equipmentToRemoveId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     if (fullscreenImageUri != null) {
         PlanZoomDialog(imageUri = fullscreenImageUri!!) { fullscreenImageUri = null }
@@ -239,19 +241,28 @@ fun PlanDetailScreen(
                             }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
                             DropdownMenu(
                                 expanded = showEqMenu,
-                                onDismissRequest = { showEqMenu = false }) {
+                                onDismissRequest = { showEqMenu = false },
+                                shape = MaterialTheme.shapes.medium,
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ) {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             "Aus Plan entfernen",
+                                            fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.error
                                         )
                                     },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Entfernen",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    },
                                     onClick = {
-                                        showEqMenu = false; viewModel.removeEquipmentFromPlan(
-                                        plan.id,
-                                        equipment.id
-                                    )
+                                        showEqMenu = false
+                                        equipmentToRemoveId = equipment.id
                                     }
                                 )
                             }
@@ -434,6 +445,25 @@ fun PlanDetailScreen(
                 }
             )
         }
+    }
+    if (equipmentToRemoveId != null) {
+        AlertDialog(
+            onDismissRequest = { equipmentToRemoveId = null },
+            title = { Text("ÜBUNG ENTFERNEN?", fontWeight = FontWeight.Black) },
+            text = { Text("Möchtest du diese Übung wirklich aus deinem Trainingsplan löschen?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.removeEquipmentFromPlan(plan.id, equipmentToRemoveId!!)
+                        equipmentToRemoveId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("LÖSCHEN") }
+            },
+            dismissButton = {
+                TextButton(onClick = { equipmentToRemoveId = null }) { Text("ABBRECHEN") }
+            }
+        )
     }
 }
 

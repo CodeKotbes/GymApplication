@@ -1,22 +1,23 @@
 package com.example.gymapplication
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.gymapplication.data.GymDatabase
 import com.example.gymapplication.gymUI.GymApp
 import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.GymViewModelFactory
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -32,16 +33,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        super.onCreate(savedInstanceState)
-
-        val database = GymDatabase.getDatabase(this)
-
+        val database = GymDatabase.getDatabase(this) //
         val viewModel: GymViewModel by viewModels {
-            GymViewModelFactory(database.gymDao())
+            GymViewModelFactory(database.gymDao()) //
         }
 
-        enableEdgeToEdge()
+        viewModel.updateBackupSchedule(this)
 
+        enableEdgeToEdge()
         setContent {
             GymApp(viewModel)
         }

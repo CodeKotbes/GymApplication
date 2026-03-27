@@ -49,7 +49,7 @@ class WorkoutService : Service() {
                         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                     )
                     val manager = getSystemService(NotificationManager::class.java)
-                    manager.notify(1, buildNotification(session.name, "Pausiert ⏸", pendingIntent))
+                    manager.notify(1, buildNotification(session.name, "Pausiert", pendingIntent))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -83,7 +83,7 @@ class WorkoutService : Service() {
         timerJob?.cancel()
 
         if (isPaused) {
-            val notification = buildNotification(workoutName, "Pausiert ⏸", pendingIntent)
+            val notification = buildNotification(workoutName, "Pausiert", pendingIntent)
             startForeground(1, notification)
         } else {
             startForeground(1, buildNotification(workoutName, "00:00", pendingIntent))

@@ -1,28 +1,19 @@
 package com.example.gymapplication.gymUI
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,12 +25,15 @@ fun HowToUseScreen(
     onFinishOnboarding: () -> Unit = {},
     isOnboarding: Boolean = false
 ) {
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val tabs = listOf("ANLEITUNG", "NEUIGKEITEN")
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (isOnboarding) "WILLKOMMEN" else "ANLEITUNG & FUNKTIONEN",
+                        if (isOnboarding) "WILLKOMMEN" else "HILFE & UPDATES",
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -58,92 +52,247 @@ fun HowToUseScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (isOnboarding) {
-                Text(
-                    "Bevor du loslegst, hier ein kurzer Überblick über die wichtigsten Funktionen:",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            if (!isOnboarding) {
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    divider = {}
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title, fontWeight = FontWeight.Bold) }
+                        )
+                    }
+                }
             }
 
-            GuideSection(
-                title = "1. Geräte",
-                text = "Hier legst du den Grundstein: Erstelle Geräte und Übungen und ordne sie Muskelgruppen zu. Optional kannst du eigene Bilder hochladen (und in der Ansicht zoomen). Du kannst alles jederzeit bearbeiten, umbenennen oder löschen. Auch das manuelle Nachtragen von vergangenen Sätzen inklusive Datum ist hier problemlos möglich."
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            GuideSection(
-                title = "2. Trainingspläne & Live-Workout",
-                text = "Erstelle eigene Pläne, ordne deine Geräte über Dropdowns zu und ändere die Reihenfolge durch Tippen auf die Zahlen. Pläne können importiert, geteilt und jederzeit angepasst werden.\n\nStartest du ein Workout, legst du zuerst deine Pausenzeit fest. Im Workout trägst du deine Sätze ein (Aufwärmsätze werden nicht gespeichert) und hast deinen letzten Rekord als blassen 'Ghost-Wert' immer im Blick. Ein Timer trackt deine Pausen und das Handy vibriert, wenn es weitergeht. Verlässt du die App, läuft das Training im Hintergrund weiter. Du kannst jederzeit über den gelben 'LIVE'-Button unten ins aktive Workout zurückkehren."
-            )
+                if (selectedTab == 0) {
+                    GuideSection(
+                        icon = Icons.Default.FitnessCenter,
+                        title = "1. Geräte & Übungen",
+                        text = "Erstelle Übungen und ordne sie Muskelgruppen zu. Du kannst eigene Bilder hochladen, zoomen und jederzeit alles bearbeiten."
+                    )
 
-            GuideSection(
-                title = "3. Fortschritt",
-                text = "Tracke deinen Körper (Gewicht, Bizepsumfang etc.). Wähle beim Gewicht dein Ziel (Abnehmen, Zunehmen, Halten) für smarte Trend-Farben. In der Vorschau kannst du durch die Graphen wischen, im Vollbildmodus (tippen!) auch zoomen und genaue Werte ablesen.\n\nUnter 'Gewichte' siehst du deine Kraftsteigerung anhand deiner absolvierten Workouts. Der Bereich 'Rekorde' feiert deine Bestleistungen und berechnet sogar dein theoretisches 1RM (One Rep Max)!"
-            )
+                    GuideSection(
+                        icon = Icons.Default.PlayCircle,
+                        title = "2. Live-Workouts",
+                        text = "Starte Pläne mit festen Pausenzeiten. Während des Trainings siehst du deine letzten Sätze als 'Ghost-Werte'. Der Timer läuft im Hintergrund weiter wenn du die App verlässt."
+                    )
 
-            GuideSection(
-                title = "4. Kalender & Planung",
-                text = "Plane deine Workouts im Voraus! Geplante Einheiten kannst du erst am jeweiligen Tag starten. Um 00:01 Uhr an einem Trainingstag erinnert dich die App per Benachrichtigung an deinen Plan. Ein Tipp auf ein absolviertes Training bringt dich zu den Details, ein Tipp auf ein geplantes direkt zum Start des Workouts."
-            )
+                    GuideSection(
+                        icon = Icons.Default.ShowChart,
+                        title = "3. Fortschritt & Rekorde",
+                        text = "Tracke dein Körpergewicht, Umfänge und deine Gewichte von den Geräten. Die App berechnet deine Bestleistungen, dein theoretisches 1 Rep Max (1RM) und stellt dir Analysen deiner Übungen zusammen."
+                    )
 
-            GuideSection(
-                title = "5. Optionen",
-                text = "Wechsle jederzeit zwischen Dark- und Light-Mode. Erstelle vollständige Backups deiner Daten (z.B. für einen Handywechsel) und importiere sie wieder, nach einem Neustart der App ist alles wieder da. Auch diese Anleitung findest du hier jederzeit wieder."
-            )
+                    GuideSection(
+                        icon = Icons.Default.Event,
+                        title = "4. Kalender & Planung",
+                        text = "Plane Workouts für die Zukunft. Die App erinnert dich am Trainingstag per Benachrichtigung. Ein Tipp auf den Kalendereintrag bringt dich direkt zum Start oder zu den Details."
+                    )
 
-            GuideSection(
-                title = "6. Sonstiges",
-                text = "Diese App läuft 100% lokal auf deinem Gerät, es ist keine Internetverbindung nötig und deine Daten gehören nur dir! \n\nTipp für Backups: Speichere sie am besten direkt in Google Drive oder einem ähnlichen Cloud-Dienst, da dafür der Datei-Explorer deines Handys geöffnet wird. Bei Fehlern oder Wünschen zur App, melde dich einfach bei mir!"
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+                    GuideSection(
+                        icon = Icons.Default.CloudDone,
+                        title = "5. Backup & Sicherheit",
+                        text = "Deine Daten liegen 100% lokal. Nutze die Backup-Funktion in den Optionen, um deine Fortschritte (z.B. in Google Drive) zu sichern."
+                    )
 
-            if (isOnboarding) {
-                Button(
-                    onClick = onFinishOnboarding,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(65.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text("VERSTANDEN", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(
+                                alpha = 0.2f
+                            )
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.BugReport,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Fehler gefunden? Bitte melde Bugs oder Wünsche direkt an mich, damit ich sie so schnell wie möglich beheben kann!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                } else {
+                    UpdateNote(
+                        version = "Version 1.1",
+                        date = "27.03.2026",
+                        description = "Optimierungen für den Workflow.",
+                        features = listOf(
+                            "NEU: Die Workout-Dauer wird jetzt präzise aufgenommen und gespeichert.",
+                            "NEU: Du kannst jetzt feste Ziele für Körperwerte festlegen.",
+                            "UI: Kein automatischer Screenwechsel mehr – du bleibst nach dem Speichern auf deiner aktuellen Ansicht.",
+                            "Sicherheit: Überall in der App wurde eine Löschbestätigung hinzugefügt, um versehentliches Löschen zu verhindern.",
+                            "NEU: Analyse-Dashboard mit Workload-Graph und Muskel-Balance-Diagrammen.",
+                            "NEU: Automatisches Backup-System mit Zeitplan und Ordnerwahl.",
+                            "NEU: Efficiency-Factor (Korrelation Kraft zu Körpergewicht).",
+                            "NEU: Bild-Vergleich (Split-Screen) für Körper-Fortschritte.",
+                            "NEU: Notizfunktion für Geräte und Einheiten",
+                            "NEU: Workout Summary",
+                            "UI: Modernisiertes Design für alle Dropdown-Menüs und Zeitwähler."
+                        )
+                    )
+                    UpdateNote(
+                        version = "Version 1.0 - Testversion",
+                        date = "26.03.2026",
+                        description = "Willkommen zur ersten offiziellen Version! Keine Internetverbindung nötig, deine Daten gehören dir.",
+                        features = listOf(
+                            "Geräte: Eigene Bilder mit Zoom & Muskelgruppen-Zuordnung.",
+                            "Live-Workout: Ghost-Modus (Werte der letzten Einheit sehen) & Vibrations-Timer im Hintergrund.",
+                            "Pläne: Einfaches Erstellen, Sortieren per Tippen und Export/Import für Freunde.",
+                            "Fortschritt: Körperwerte-Tracking mit smarten Trend-Farben (Abnehmen/Zunehmen).",
+                            "Analyse: PR-Bereich inklusive 1RM-Kalkulator.",
+                            "Kalender: Workouts planen inkl. Erinnerungs-Benachrichtigung um 00:01 Uhr.",
+                            "Backup: Vollständige Daten-Sicherung & Wiederherstellung (via Datei-Explorer/Drive)."
+                        )
+                    )
                 }
-                Spacer(modifier = Modifier.height(32.dp))
+
+                if (isOnboarding) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onFinishOnboarding,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(65.dp),
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Text(
+                            "VERSTANDEN & STARTEN",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(120.dp))
             }
         }
     }
 }
 
 @Composable
-fun GuideSection(title: String, text: String) {
+fun GuideSection(icon: ImageVector, title: String, text: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                alpha = 0.5f
+                alpha = 0.3f
             )
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Row(modifier = Modifier.padding(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title.uppercase(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 20.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun UpdateNote(version: String, date: String, description: String = "", features: List<String>) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
             Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                version,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 22.sp
+                date,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        if (description.isNotEmpty()) {
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                features.forEach { feature ->
+                    Row {
+                        Text(
+                            "•",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(feature, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
         }
     }
 }

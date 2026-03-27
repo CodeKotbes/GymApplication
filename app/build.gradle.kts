@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
+    implementation(libs.androidx.documentfile)
+    implementation(libs.androidx.work.runtime.ktx)
     ksp(libs.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

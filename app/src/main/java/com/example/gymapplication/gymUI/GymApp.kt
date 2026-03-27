@@ -103,7 +103,13 @@ fun GymApp(viewModel: GymViewModel) {
                                         )
                                     }
                                     Button(
-                                        onClick = { viewModel.finishWorkout(context) },
+                                        onClick = {
+                                            viewModel.triggerWorkoutSummary()
+
+                                            navController.navigate("active_workout") {
+                                                launchSingleTop = true
+                                            }
+                                        },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.error,
                                             contentColor = MaterialTheme.colorScheme.onError
@@ -225,7 +231,6 @@ fun GymApp(viewModel: GymViewModel) {
                     )
                 }
 
-                // NEU: Onboarding-Screen Logik
                 composable("howToUse") {
                     HowToUseScreen(
                         onBack = { navController.popBackStack() },

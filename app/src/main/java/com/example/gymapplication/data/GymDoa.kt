@@ -26,6 +26,17 @@ data class EquipmentWithLog(
     val latestSets: Int?
 )
 
+data class DetailedMuscleStat(
+    val muscleGroup: String,
+    val equipmentName: String,
+    val totalSets: Int
+)
+
+data class DailyVolumeStat(
+    val dateStr: String,
+    val totalVolume: Float
+)
+
 @Dao
 interface GymDao {
     @Query("SELECT * FROM equipment_table ORDER BY name ASC")
@@ -185,4 +196,26 @@ interface GymDao {
     @Query("UPDATE plan_exercise_table SET orderIndex = :newIndex WHERE planId = :planId AND equipmentId = :equipmentId")
     suspend fun updatePlanExerciseOrder(planId: Int, equipmentId: Int, newIndex: Int)
 
+    @Query(
+        """
+        SELECT e.muscleGroup, e.name as equipmentName, COUNT(l.id) as totalSets
+        FROM workout_log_table l
+        INNER JOIN equipment_table e ON l.equipmentId = e.id
+        WHERE l.dateMillis >= :sinceMillis
+        GROUP BY e.muscleGroup, e.id
+        ORDER BY totalSets DESC
+    """
+    )
+    fun getDetailedMuscleStats(sinceMillis: Long): kotlinx.coroutines.flow.Flow<List<DetailedMuscleStat>>
+
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', dateMillis / 1000, 'unixepoch', 'localtime') as dateStr, 
+               SUM(weight * reps) as totalVolume
+        FROM workout_log_table
+        GROUP BY dateStr
+        ORDER BY dateStr ASC
+    """
+    )
+    fun getDailyVolumeStats(): Flow<List<DailyVolumeStat>>
 }

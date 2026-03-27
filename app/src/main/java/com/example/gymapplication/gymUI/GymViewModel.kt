@@ -92,6 +92,9 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     private val _currentExerciseIndex = MutableStateFlow(0)
     val currentExerciseIndex = _currentExerciseIndex.asStateFlow()
 
+    private val _activeSessionNotes = MutableStateFlow<Map<Int, Pair<String?, String?>>>(emptyMap())
+    val activeSessionNotes = _activeSessionNotes.asStateFlow()
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val ongoingSession = dao.getActiveWorkoutSession()
@@ -103,6 +106,15 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
                     _isResting.value = true
                     startRestTimerLoop(null)
                 }
+
+                val sessionLogs = dao.getLogsForSessionDirect(ongoingSession.sessionId)
+                val noteMap = mutableMapOf<Int, Pair<String?, String?>>()
+                sessionLogs.forEach { log ->
+                    if (!log.sessionNote.isNullOrBlank() || !log.sessionNoteImageUris.isNullOrBlank()) {
+                        noteMap[log.equipmentId] = Pair(log.sessionNote, log.sessionNoteImageUris)
+                    }
+                }
+                _activeSessionNotes.value = noteMap
             }
         }
     }
@@ -229,6 +241,7 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     fun startWorkout(context: Context, planId: Int?, name: String, restTime: Int) {
         _currentRestTime.value = restTime
         _currentExerciseIndex.value = 0
+        _activeSessionNotes.value = emptyMap()
         skipRest()
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -264,7 +277,6 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
             val currentSession = _activeSession.value
 
             if (currentSession != null) {
-                // HIER IST DER FIX: Wir schreiben die Timer-Dauer in die Datenbank!
                 val finishedSession = currentSession.copy(
                     endTimeMillis = System.currentTimeMillis(),
                     durationInSeconds = _workoutDuration.value.toInt()
@@ -290,6 +302,7 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
             timerJob?.cancel()
             _workoutDuration.value = 0L
             _currentExerciseIndex.value = 0
+            _activeSessionNotes.value = emptyMap()
             skipRest()
 
             val intent = Intent(context, WorkoutService::class.java).apply {
@@ -302,6 +315,13 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     val plannedWorkouts = dao.getAllPlannedWorkouts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val detailedMuscleStats = dao.getDetailedMuscleStats(
+        System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val dailyVolumeStats = dao.getDailyVolumeStats()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun scheduleWorkout(planId: Int, planName: String, dateMillis: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertPlannedWorkout(
@@ -312,6 +332,91 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
                 )
             )
         }
+    }
+
+    fun scheduleBackup(context: Context, enabled: Boolean, frequency: String) {
+        val workManager = androidx.work.WorkManager.getInstance(context)
+
+        if (!enabled) {
+            workManager.cancelUniqueWork("auto_backup")
+            return
+        }
+
+        val interval = if (frequency == "Täglich") 1L else 7L
+
+        val backupRequest = androidx.work.PeriodicWorkRequestBuilder<BackupWorker>(
+            interval, java.util.concurrent.TimeUnit.DAYS
+        ).setConstraints(
+            androidx.work.Constraints.Builder()
+                .setRequiresStorageNotLow(true)
+                .build()
+        ).build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "auto_backup",
+            androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
+            backupRequest
+        )
+    }
+
+    private val _triggerSummaryEvent = MutableStateFlow(false)
+    val triggerSummaryEvent = _triggerSummaryEvent.asStateFlow()
+
+    fun triggerWorkoutSummary() {
+        _triggerSummaryEvent.value = true
+    }
+
+    fun consumeSummaryEvent() {
+        _triggerSummaryEvent.value = false
+    }
+
+    fun updateBackupSchedule(context: Context) {
+        val sharedPrefs = context.getSharedPreferences("gym_settings", Context.MODE_PRIVATE)
+        val enabled = sharedPrefs.getBoolean("auto_backup_enabled", false)
+        val frequency = sharedPrefs.getString("auto_backup_frequency", "Täglich")
+        val folderUri = sharedPrefs.getString("auto_backup_folder_uri", null)
+        val hour = sharedPrefs.getInt("auto_backup_hour", 2) // Standard 02:00 Uhr
+        val minute = sharedPrefs.getInt("auto_backup_minute", 0)
+
+        val workManager = androidx.work.WorkManager.getInstance(context)
+
+        if (!enabled || folderUri == null) {
+            workManager.cancelUniqueWork("gym_auto_backup")
+            return
+        }
+
+        val calendar = Calendar.getInstance()
+        val nowMillis = calendar.timeInMillis
+        val targetCalendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        if (targetCalendar.timeInMillis <= nowMillis) {
+            targetCalendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        val initialDelay = targetCalendar.timeInMillis - nowMillis
+        val interval = if (frequency == "Täglich") 1L else 7L
+
+        val request = androidx.work.PeriodicWorkRequestBuilder<BackupWorker>(
+            interval, java.util.concurrent.TimeUnit.DAYS
+        )
+            .setInitialDelay(initialDelay, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .setConstraints(
+                androidx.work.Constraints.Builder()
+                    .setRequiresStorageNotLow(true)
+                    .build()
+            )
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "gym_auto_backup",
+            androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
     }
 
     fun scheduleWorkout(context: Context, planId: Int, planName: String, dateMillis: Long) {
@@ -494,6 +599,12 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
         }
     }
 
+    fun updateEquipmentNote(equipment: Equipment, note: String?, imageUris: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.updateEquipment(equipment.copy(generalNote = note, generalNoteImageUris = imageUris))
+        }
+    }
+
     fun deleteEquipment(equipment: Equipment) {
         viewModelScope.launch {
             dao.deleteEquipment(equipment)
@@ -553,6 +664,40 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
         }
     }
 
+    fun updateActiveSessionNote(equipmentId: Int, note: String?, imageUris: String?) {
+        val currentNotes = _activeSessionNotes.value.toMutableMap()
+        currentNotes[equipmentId] = Pair(note, imageUris)
+        _activeSessionNotes.value = currentNotes
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val sessionId = _activeSession.value?.sessionId ?: return@launch
+            val logs = dao.getLogsForSessionDirect(sessionId).filter { it.equipmentId == equipmentId }
+            logs.forEach { log ->
+                dao.updateLog(log.copy(sessionNote = note, sessionNoteImageUris = imageUris))
+            }
+        }
+    }
+
+    fun updatePastSessionNote(sessionId: Int, equipmentId: Int, note: String?, imageUris: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val logs = dao.getLogsForSessionDirect(sessionId).filter { it.equipmentId == equipmentId }
+            logs.forEach { log ->
+                dao.updateLog(log.copy(sessionNote = note, sessionNoteImageUris = imageUris))
+            }
+        }
+    }
+
+    fun getLastSessionNote(equipmentId: Int, currentSessionId: Int?): kotlinx.coroutines.flow.Flow<Pair<String?, String?>?> {
+        return dao.getLogsForEquipment(equipmentId).map { logs ->
+            val validLogs = logs.filter {
+                it.sessionId != currentSessionId &&
+                        (!it.sessionNote.isNullOrBlank() || !it.sessionNoteImageUris.isNullOrBlank())
+            }
+            val lastLog = validLogs.maxByOrNull { it.dateMillis }
+            if (lastLog != null) Pair(lastLog.sessionNote, lastLog.sessionNoteImageUris) else null
+        }
+    }
+
     fun saveWorkoutLog(
         equipmentId: Int,
         weight: Float,
@@ -565,10 +710,12 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
             val newLogs = mutableListOf<WorkoutLog>()
             val currentSessionId = _activeSession.value?.sessionId
 
+            val sessionLogs = if (currentSessionId != null) {
+                dao.getLogsForSessionDirect(currentSessionId).filter { it.equipmentId == equipmentId }
+            } else emptyList()
+
             val maxSetNumber = if (currentSessionId != null) {
-                val sessionLogs = dao.getLogsForSessionDirect(currentSessionId)
-                sessionLogs.filter { it.equipmentId == equipmentId }.maxOfOrNull { it.setNumber }
-                    ?: 0
+                sessionLogs.maxOfOrNull { it.setNumber } ?: 0
             } else {
                 val todayStart = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 0)
@@ -583,6 +730,10 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
                     .maxOfOrNull { it.setNumber } ?: 0
             }
 
+            val draftNote = _activeSessionNotes.value[equipmentId]
+            val noteToSave = draftNote?.first ?: sessionLogs.firstOrNull()?.sessionNote
+            val imagesToSave = draftNote?.second ?: sessionLogs.firstOrNull()?.sessionNoteImageUris
+
             var nextSetNumber = maxSetNumber + 1
 
             for (i in 1..sets) {
@@ -594,7 +745,9 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
                         setNumber = nextSetNumber++,
                         weight = weight,
                         reps = reps,
-                        isCompleted = true
+                        isCompleted = true,
+                        sessionNote = noteToSave,
+                        sessionNoteImageUris = imagesToSave
                     )
                 )
             }

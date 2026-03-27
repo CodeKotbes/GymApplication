@@ -10,7 +10,9 @@ data class Equipment(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val muscleGroup: String,
-    val imageUri: String?
+    val imageUri: String?,
+    val generalNote: String? = null,
+    val generalNoteImageUris: String? = null
 )
 
 @Entity(tableName = "workout_plan_table")
@@ -79,7 +81,9 @@ data class WorkoutLog(
     val setNumber: Int,
     val weight: Float,
     val reps: Int,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val sessionNote: String? = null,
+    val sessionNoteImageUris: String? = null
 )
 
 @Entity(tableName = "planned_workouts")

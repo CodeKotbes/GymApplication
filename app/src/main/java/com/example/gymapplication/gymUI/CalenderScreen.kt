@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -91,7 +92,6 @@ fun CalendarZoomDialog(imageUri: String, onClose: () -> Unit) {
     }
 }
 
-// NEU: Der Samsung-Style Kalender
 @Composable
 fun GymCalendar(
     selectedDateMillis: Long,
@@ -110,10 +110,11 @@ fun GymCalendar(
     val monthYearFormat = SimpleDateFormat("MMMM yyyy", locale)
     val monthYearString = monthYearFormat.format(currentMonthCal.time)
 
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp)) {
-        // Monat & Pfeile Navigation
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -139,7 +140,6 @@ fun GymCalendar(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Wochentage (Beginnt garantiert am Montag)
         val weekdays = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
         Row(modifier = Modifier.fillMaxWidth()) {
             weekdays.forEach { day ->
@@ -156,21 +156,21 @@ fun GymCalendar(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Kalender Grid (Die Tage und Punkte)
         val firstDayOfWeek = currentMonthCal.get(Calendar.DAY_OF_WEEK)
-        val startOffset = (firstDayOfWeek + 5) % 7 // Berechnet perfekten Montag-Start
+        val startOffset = (firstDayOfWeek + 5) % 7
         val daysInMonth = currentMonthCal.getActualMaximum(Calendar.DAY_OF_MONTH)
         val totalCells = startOffset + daysInMonth
         val rows = (totalCells + 6) / 7
-
         val dateFormat = SimpleDateFormat("yyyyMMdd", locale)
         val selectedStr = dateFormat.format(Date(selectedDateMillis))
         val todayStr = dateFormat.format(Date())
 
         for (row in 0 until rows) {
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
                 for (col in 0 until 7) {
                     val cellIndex = row * 7 + col
                     val dayNum = cellIndex - startOffset + 1
@@ -203,7 +203,6 @@ fun GymCalendar(
                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
 
-                            // Die kleinen Samsung-Punkte für Workouts!
                             if (hasFinished || hasPlanned) {
                                 Row(
                                     modifier = Modifier
@@ -235,9 +234,11 @@ fun GymCalendar(
                             }
                         }
                     } else {
-                        Spacer(modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f))
+                        Spacer(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                        )
                     }
                 }
             }
@@ -251,24 +252,17 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
     val finishedSessions by viewModel.finishedSessions.collectAsState(initial = emptyList())
     val plannedWorkouts by viewModel.plannedWorkouts.collectAsState(initial = emptyList())
     val allPlans by viewModel.workoutPlans.collectAsState(initial = emptyList())
-
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val locale = Locale.GERMANY
-
     var selectedMillis by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
     val selectedDateStr = SimpleDateFormat("EEEE, dd. MMMM", locale).format(Date(selectedMillis))
-
     var showPlanDialog by rememberSaveable { mutableStateOf(false) }
-
     var sessionDetailsId by rememberSaveable { mutableStateOf<Int?>(null) }
     val sessionDetails = finishedSessions.find { it.sessionId == sessionDetailsId }
-
     var planDetailsId by rememberSaveable { mutableStateOf<Int?>(null) }
     val planDetails = allPlans.find { it.id == planDetailsId }
-
     var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
-
     var sessionToDelete by remember { mutableStateOf<WorkoutSession?>(null) }
     var plannedToDelete by remember { mutableStateOf<PlannedWorkout?>(null) }
 
@@ -314,7 +308,6 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
             }
 
             item {
-                // Vorbereitung für unsere kleinen Punkte im Kalender!
                 val dateFormatForDots = SimpleDateFormat("yyyyMMdd", locale)
                 val finishedDatesSet =
                     finishedSessions.map { dateFormatForDots.format(Date(it.startTimeMillis)) }
@@ -331,7 +324,6 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    // UNSER NEUER CUSTOM KALENDER EINSATZ:
                     GymCalendar(
                         selectedDateMillis = selectedMillis,
                         onDateSelected = { selectedMillis = it },
@@ -374,13 +366,11 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
                 Calendar.getInstance(locale).apply { timeInMillis = selectedMillis }
             val selYear = selectedCalendar.get(Calendar.YEAR)
             val selDay = selectedCalendar.get(Calendar.DAY_OF_YEAR)
-
             val sessionsToday = finishedSessions.filter { session ->
                 val cal =
                     Calendar.getInstance(locale).apply { timeInMillis = session.startTimeMillis }
                 cal.get(Calendar.YEAR) == selYear && cal.get(Calendar.DAY_OF_YEAR) == selDay
             }
-
             val plannedToday = plannedWorkouts.filter { planned ->
                 val cal = Calendar.getInstance(locale).apply { timeInMillis = planned.dateMillis }
                 cal.get(Calendar.YEAR) == selYear && cal.get(Calendar.DAY_OF_YEAR) == selDay
@@ -427,13 +417,13 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
                                 if (h > 0) {
                                     String.format(
                                         Locale.getDefault(),
-                                        " • ⏱️ %02d:%02d:%02d Std.",
+                                        " •  %02d:%02d:%02d Std.",
                                         h,
                                         m,
                                         s
                                     )
                                 } else {
-                                    String.format(Locale.getDefault(), " • ⏱️ %02d:%02d Min.", m, s)
+                                    String.format(Locale.getDefault(), " •  %02d:%02d Min.", m, s)
                                 }
                             } else ""
 
@@ -453,12 +443,23 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
                             }
                             DropdownMenu(
                                 expanded = showMenu,
-                                onDismissRequest = { showMenu = false }) {
+                                onDismissRequest = { showMenu = false },
+                                shape = MaterialTheme.shapes.medium,
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ) {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             "Löschen",
+                                            fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Löschen",
+                                            tint = MaterialTheme.colorScheme.error
                                         )
                                     },
                                     onClick = { showMenu = false; sessionToDelete = session }
@@ -507,15 +508,30 @@ fun CalendarScreen(viewModel: GymViewModel, navController: NavController) {
                             }
                             DropdownMenu(
                                 expanded = showMenu,
-                                onDismissRequest = { showMenu = false }) {
+                                onDismissRequest = { showMenu = false },
+                                shape = MaterialTheme.shapes.medium,
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ) {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             "Löschen",
+                                            fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.error
                                         )
                                     },
-                                    onClick = { showMenu = false; plannedToDelete = planned }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Löschen",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        plannedToDelete =
+                                            planned
+                                    }
                                 )
                             }
                         }

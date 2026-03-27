@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,23 +22,17 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.gymapplication.data.WorkoutPlan
 
 @Composable
 fun PlanScreen(viewModel: GymViewModel, navController: NavController) {
     val plans by viewModel.workoutPlans.collectAsState(initial = emptyList())
     val keyboardController = LocalSoftwareKeyboardController.current
-
     var selectedPlanId by rememberSaveable { mutableStateOf<Int?>(null) }
     val selectedPlan = plans.find { it.id == selectedPlanId }
-
     var showDiary by rememberSaveable { mutableStateOf(false) }
-
     var planToEditId by rememberSaveable { mutableStateOf<Int?>(null) }
     val planToEdit = plans.find { it.id == planToEditId }
     var editPlanName by rememberSaveable { mutableStateOf("") }
-
-    // NEU: ID für die Löschbestätigung
     var planToDeleteId by rememberSaveable { mutableStateOf<Int?>(null) }
     val planToDelete = plans.find { it.id == planToDeleteId }
 
@@ -62,11 +58,18 @@ fun PlanScreen(viewModel: GymViewModel, navController: NavController) {
         var errorMessage by rememberSaveable { mutableStateOf("") }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("TRAININGSPLÄNE", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
+                Text(
+                    "TRAININGSPLÄNE",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Black
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Card(
@@ -75,42 +78,167 @@ fun PlanScreen(viewModel: GymViewModel, navController: NavController) {
                     shape = MaterialTheme.shapes.large
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("NEUEN PLAN ERSTELLEN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Icon(Icons.Default.Add, contentDescription = "Importieren") }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "NEUEN PLAN ERSTELLEN",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Importieren"
+                                )
+                            }
                         }
-                        if (errorMessage.isNotEmpty()) { Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
-                        OutlinedTextField(value = newPlanName, onValueChange = { newPlanName = it; errorMessage = "" }, label = { Text("Planname") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = MaterialTheme.shapes.medium)
+                        if (errorMessage.isNotEmpty()) {
+                            Text(
+                                errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        OutlinedTextField(
+                            value = newPlanName,
+                            onValueChange = { newPlanName = it; errorMessage = "" },
+                            label = { Text("Planname") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = { if (newPlanName.isNotBlank()) { keyboardController?.hide(); viewModel.createWorkoutPlan(newPlanName); newPlanName = "" } else { errorMessage = "NAME FEHLT!" } }, modifier = Modifier.fillMaxWidth().height(55.dp), shape = MaterialTheme.shapes.medium) { Text("ERSTELLEN", fontWeight = FontWeight.Bold) }
+                        Button(
+                            onClick = {
+                                if (newPlanName.isNotBlank()) {
+                                    keyboardController?.hide(); viewModel.createWorkoutPlan(
+                                        newPlanName
+                                    ); newPlanName = ""
+                                } else {
+                                    errorMessage = "NAME FEHLT!"
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(55.dp),
+                            shape = MaterialTheme.shapes.medium
+                        ) { Text("ERSTELLEN", fontWeight = FontWeight.Bold) }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                Text("TRAININGSTAGEBUCH", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
+                Text(
+                    "TRAININGSTAGEBUCH",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Black
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Card(modifier = Modifier.fillMaxWidth().clickable { showDiary = true }, shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "TRAININGSEINHEITEN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDiary = true },
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "TRAININGSEINHEITEN",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                Text("MEINE PLÄNE", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
+                Text(
+                    "MEINE PLÄNE",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Black
+                )
             }
 
             items(plans) { plan ->
                 var showMenu by remember { mutableStateOf(false) }
-                Card(modifier = Modifier.fillMaxWidth().clickable { selectedPlanId = plan.id }, shape = MaterialTheme.shapes.medium) {
-                    Row(modifier = Modifier.padding(20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(plan.name.uppercase(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedPlanId = plan.id },
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            plan.name.uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                         Box {
-                            IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
-                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                DropdownMenuItem(text = { Text("Umbenennen") }, onClick = { showMenu = false; planToEditId = plan.id; editPlanName = plan.name })
-                                // NEU: Statt direkt zu löschen, setzen wir die Lösch-ID
-                                DropdownMenuItem(text = { Text("Löschen", color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; planToDeleteId = plan.id })
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = null
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                shape = MaterialTheme.shapes.medium,
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Umbenennen", fontWeight = FontWeight.Bold) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Umbenennen",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false; planToEditId = plan.id; editPlanName =
+                                        plan.name
+                                    }
+                                )
+
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                )
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Löschen",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Löschen",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    onClick = { showMenu = false; planToDeleteId = plan.id }
+                                )
                             }
                         }
                     }
@@ -119,7 +247,6 @@ fun PlanScreen(viewModel: GymViewModel, navController: NavController) {
             item { Spacer(modifier = Modifier.height(120.dp)) }
         }
 
-        // NEU: Der Lösch-Dialog für Pläne
         if (planToDelete != null) {
             AlertDialog(
                 onDismissRequest = { planToDeleteId = null },
@@ -134,7 +261,11 @@ fun PlanScreen(viewModel: GymViewModel, navController: NavController) {
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) { Text("LÖSCHEN") }
                 },
-                dismissButton = { TextButton(onClick = { planToDeleteId = null }) { Text("ABBRECHEN") } }
+                dismissButton = {
+                    TextButton(onClick = {
+                        planToDeleteId = null
+                    }) { Text("ABBRECHEN") }
+                }
             )
         }
     }
