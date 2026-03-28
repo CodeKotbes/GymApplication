@@ -82,7 +82,7 @@ fun HowToUseScreen(
                 if (selectedTab == 0) {
                     GuideSection(
                         icon = Icons.Default.FitnessCenter,
-                        title = "1. Geräte & Übungen",
+                        title = "1. Übungen",
                         text = "Erstelle Übungen und ordne sie Muskelgruppen zu. Du kannst eigene Bilder hochladen, zoomen und jederzeit alles bearbeiten."
                     )
 
@@ -95,7 +95,7 @@ fun HowToUseScreen(
                     GuideSection(
                         icon = Icons.Default.ShowChart,
                         title = "3. Fortschritt & Rekorde",
-                        text = "Tracke dein Körpergewicht, Umfänge und deine Gewichte von den Geräten. Die App berechnet deine Bestleistungen, dein theoretisches 1 Rep Max (1RM) und stellt dir Analysen deiner Übungen zusammen."
+                        text = "Tracke dein Körpergewicht, Umfänge und deine Gewichte von den Übungen. Die App berechnet deine Bestleistungen, dein theoretisches 1 Rep Max (1RM) und stellt dir Analysen deiner Übungen zusammen."
                     )
 
                     GuideSection(
@@ -151,7 +151,7 @@ fun HowToUseScreen(
                             "NEU: Automatisches Backup-System mit Zeitplan und Ordnerwahl.",
                             "NEU: Efficiency-Factor (Korrelation Kraft zu Körpergewicht).",
                             "NEU: Bild-Vergleich (Split-Screen) für Körper-Fortschritte.",
-                            "NEU: Notizfunktion für Geräte und Einheiten",
+                            "NEU: Notizfunktion für Übungen und Einheiten",
                             "NEU: Workout Summary",
                             "UI: Modernisiertes Design für alle Dropdown-Menüs und Zeitwähler."
                         )
@@ -161,7 +161,7 @@ fun HowToUseScreen(
                         date = "26.03.2026",
                         description = "Willkommen zur ersten offiziellen Version! Keine Internetverbindung nötig, deine Daten gehören dir.",
                         features = listOf(
-                            "Geräte: Eigene Bilder mit Zoom & Muskelgruppen-Zuordnung.",
+                            "Übungen: Eigene Bilder mit Zoom & Muskelgruppen-Zuordnung.",
                             "Live-Workout: Ghost-Modus (Werte der letzten Einheit sehen) & Vibrations-Timer im Hintergrund.",
                             "Pläne: Einfaches Erstellen, Sortieren per Tippen und Export/Import für Freunde.",
                             "Fortschritt: Körperwerte-Tracking mit smarten Trend-Farben (Abnehmen/Zunehmen).",

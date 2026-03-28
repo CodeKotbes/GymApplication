@@ -2,17 +2,17 @@ package com.example.gymapplication.gymUI
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.core.content.FileProvider
+import com.example.gymapplication.data.EquipmentWithLog
 import com.example.gymapplication.data.WorkoutPlan
 import com.google.gson.Gson
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
-import android.net.Uri
-import com.example.gymapplication.data.EquipmentWithLog
 import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 data class PlanExportData(
     val planName: String,
@@ -23,7 +23,9 @@ data class ExerciseExportData(
     val name: String,
     val muscleGroup: String,
     val imageFileName: String?,
-    val orderIndex: Int
+    val orderIndex: Int,
+    val generalNote: String?,
+    val generalNoteImageFileNames: String?
 )
 
 object PlanExporter {
@@ -32,15 +34,30 @@ object PlanExporter {
         plan: WorkoutPlan,
         equipmentList: List<EquipmentWithLog>
     ) {
+        val filesToZip = mutableListOf<String>()
+
         val exportExercises = equipmentList.mapIndexed { index, equipment ->
-            val fileName = equipment.imageUri?.let { File(it).name }
+            val mainImageFileName = equipment.imageUri?.let {
+                filesToZip.add(it)
+                File(it).name
+            }
+
+            val noteImageFileNames = equipment.generalNoteImageUris?.let { urisString ->
+                val uris = urisString.split("|").filter { it.isNotBlank() }
+                filesToZip.addAll(uris)
+                uris.joinToString("|") { File(it).name }
+            }
+
             ExerciseExportData(
                 name = equipment.name,
                 muscleGroup = equipment.muscleGroup,
-                imageFileName = fileName,
-                orderIndex = index
+                imageFileName = mainImageFileName,
+                orderIndex = index,
+                generalNote = equipment.generalNote,
+                generalNoteImageFileNames = noteImageFileNames
             )
         }
+
         val exportData = PlanExportData(plan.name, exportExercises)
         val jsonString = Gson().toJson(exportData)
 
@@ -53,17 +70,30 @@ object PlanExporter {
             zos.write(jsonString.toByteArray())
             zos.closeEntry()
 
-            equipmentList.forEach { equipment ->
-                equipment.imageUri?.let { imagePath ->
-                    val imageFile = File(imagePath)
-                    if (imageFile.exists()) {
-                        val imageEntry = ZipEntry(imageFile.name)
-                        zos.putNextEntry(imageEntry)
-                        FileInputStream(imageFile).use { fis ->
-                            fis.copyTo(zos)
+            filesToZip.distinct().forEach { imagePath ->
+                try {
+                    val fileName = File(imagePath).name
+                    if (fileName.isBlank()) return@forEach
+
+                    val imageEntry = ZipEntry(fileName)
+                    zos.putNextEntry(imageEntry)
+
+                    if (imagePath.startsWith("content://") || imagePath.startsWith("android.resource://")) {
+                        val uri = Uri.parse(imagePath)
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            inputStream.copyTo(zos)
                         }
-                        zos.closeEntry()
+                    } else {
+                        val imageFile = File(imagePath)
+                        if (imageFile.exists()) {
+                            FileInputStream(imageFile).use { fis ->
+                                fis.copyTo(zos)
+                            }
+                        }
                     }
+                    zos.closeEntry()
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }

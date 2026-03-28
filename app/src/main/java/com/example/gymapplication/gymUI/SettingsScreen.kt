@@ -62,7 +62,6 @@ fun SettingsScreen(
     var backupHour by remember { mutableIntStateOf(sharedPrefs.getInt("auto_backup_hour", 2)) }
     var backupMinute by remember { mutableIntStateOf(sharedPrefs.getInt("auto_backup_minute", 0)) }
 
-    // State für den schicken Material 3 Time Picker
     var showTimePicker by remember { mutableStateOf(false) }
     val timePickerState = rememberTimePickerState(
         initialHour = backupHour,
@@ -369,7 +368,6 @@ fun SettingsScreen(
                 .height(60.dp),
             shape = RoundedCornerShape(28.dp)
         ) {
-            Icon(Icons.Default.Share, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text("BACKUP EXPORTIEREN", fontWeight = FontWeight.Bold)
         }

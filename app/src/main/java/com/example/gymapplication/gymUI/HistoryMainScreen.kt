@@ -464,7 +464,7 @@ fun AnalysisContent(
                                     leadingIcon = {
                                         Icon(
                                             Icons.Default.FitnessCenter,
-                                            contentDescription = "Gerät",
+                                            contentDescription = "Übung",
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                     },
@@ -817,7 +817,7 @@ fun EquipmentProgressContent(viewModel: GymViewModel, onEquipmentClick: (Equipme
     ) {
         item {
             Text(
-                "Wähle ein Gerät für Details",
+                "Wähle eine Übung für Details",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )

@@ -21,6 +21,8 @@ data class EquipmentWithLog(
     val name: String,
     val muscleGroup: String,
     val imageUri: String?,
+    val generalNote: String?,
+    val generalNoteImageUris: String?,
     val latestWeight: Float?,
     val latestReps: Int?,
     val latestSets: Int?
@@ -94,7 +96,7 @@ interface GymDao {
 
     @Query(
         """
-        SELECT e.id, e.name, e.muscleGroup, e.imageUri,
+        SELECT e.id, e.name, e.muscleGroup, e.imageUri, e.generalNote, e.generalNoteImageUris,
                (SELECT weight FROM workout_log_table WHERE equipmentId = e.id ORDER BY dateMillis DESC, setNumber DESC LIMIT 1) as latestWeight,
                (SELECT reps FROM workout_log_table WHERE equipmentId = e.id ORDER BY dateMillis DESC, setNumber DESC LIMIT 1) as latestReps,
                (SELECT setNumber FROM workout_log_table WHERE equipmentId = e.id ORDER BY dateMillis DESC, setNumber DESC LIMIT 1) as latestSets
@@ -114,7 +116,7 @@ interface GymDao {
 
     @Query(
         """
-        SELECT e.id, e.name, e.muscleGroup, e.imageUri,
+        SELECT e.id, e.name, e.muscleGroup, e.imageUri, e.generalNote, e.generalNoteImageUris,
                (SELECT weight FROM workout_log_table WHERE equipmentId = e.id ORDER BY dateMillis DESC, setNumber DESC LIMIT 1) as latestWeight,
                (SELECT reps FROM workout_log_table WHERE equipmentId = e.id ORDER BY dateMillis DESC, setNumber DESC LIMIT 1) as latestReps,
                (SELECT setNumber FROM workout_log_table WHERE equipmentId = e.id ORDER BY dateMillis DESC, setNumber DESC LIMIT 1) as latestSets

@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +40,15 @@ import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import java.io.File
 import java.util.Locale
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,23 +60,20 @@ fun ActiveWorkoutScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val activeSession by viewModel.activeSession.collectAsState()
     val workoutDuration by viewModel.workoutDuration.collectAsState()
-
     var showSummary by rememberSaveable { mutableStateOf(false) }
+    var showFinishDialog by rememberSaveable { mutableStateOf(false) }
     var finalPlanName by rememberSaveable { mutableStateOf("") }
     var finalDuration by rememberSaveable { mutableLongStateOf(0L) }
     val triggerSummary by viewModel.triggerSummaryEvent.collectAsState()
 
     LaunchedEffect(triggerSummary) {
         if (triggerSummary && activeSession != null) {
-            finalPlanName = activeSession?.name ?: "Freies Workout"
-            finalDuration = workoutDuration
-            if (!activeSession!!.isPaused) viewModel.toggleWorkoutPause(context)
-            showSummary = true
+            showFinishDialog = true
             viewModel.consumeSummaryEvent()
         }
     }
 
-    if (activeSession == null && !showSummary) {
+    if (activeSession == null && !showSummary && !showFinishDialog) {
         LaunchedEffect(Unit) { onNavigateBack() }
         return
     }
@@ -84,7 +89,6 @@ fun ActiveWorkoutScreen(
         if (activeSession != null) viewModel.getLogsForSessionFlow(activeSession!!.sessionId)
         else kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(initial = emptyList())
-
     val allEquipment by viewModel.equipmentList.collectAsState()
     val currentIndex by viewModel.currentExerciseIndex.collectAsState()
     val isResting by viewModel.isResting.collectAsState()
@@ -94,6 +98,29 @@ fun ActiveWorkoutScreen(
 
     if (fullscreenImageUri != null) {
         HistoryZoomDialog(imageUri = fullscreenImageUri!!) { fullscreenImageUri = null }
+    }
+
+    if (showFinishDialog) {
+        AlertDialog(
+            onDismissRequest = { showFinishDialog = false },
+            title = { Text("TRAINING BEENDEN?", fontWeight = FontWeight.Black) },
+            text = { Text("Möchtest du dieses Workout wirklich abschließen und zur Auswertung gehen?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showFinishDialog = false
+                        finalPlanName = activeSession?.name ?: "Freies Workout"
+                        finalDuration = workoutDuration
+                        if (activeSession?.isPaused == false) viewModel.toggleWorkoutPause(context)
+                        showSummary = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) { Text("JA, BEENDEN", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFinishDialog = false }) { Text("WEITER TRAINIEREN") }
+            }
+        )
     }
 
     Scaffold(
@@ -140,12 +167,7 @@ fun ActiveWorkoutScreen(
                         }
 
                         Button(
-                            onClick = {
-                                finalPlanName = activeSession?.name ?: "Freies Workout"
-                                finalDuration = workoutDuration
-                                if (!activeSession!!.isPaused) viewModel.toggleWorkoutPause(context)
-                                showSummary = true
-                            },
+                            onClick = { showFinishDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
@@ -159,22 +181,26 @@ fun ActiveWorkoutScreen(
 
         if (showSummary) {
             val calculatedVolume = sessionLogs.sumOf { (it.weight * it.reps).toDouble() }.toFloat()
-
-            val topSetsList = sessionLogs
+            val allSetsList = sessionLogs
                 .groupBy { it.equipmentId }
                 .mapNotNull { (equipmentId, logs) ->
                     val eqName = allEquipment.find { it.id == equipmentId }?.name ?: "Übung"
                     val bestLog = logs.maxWithOrNull(compareBy({ it.weight }, { it.reps }))
-                    bestLog?.let { eqName to "${it.weight} kg x ${it.reps}" }
+                    if (bestLog != null) Triple(
+                        eqName,
+                        "${bestLog.weight} kg x ${bestLog.reps}",
+                        bestLog.weight
+                    ) else null
                 }
-                .take(5)
+                .sortedByDescending { it.third }
+                .map { it.first to it.second }
 
             WorkoutSummaryView(
                 modifier = Modifier.padding(innerPadding),
                 planName = finalPlanName,
                 duration = finalDuration,
                 totalVolume = calculatedVolume,
-                topSets = topSetsList,
+                topSets = allSetsList,
                 onShare = { bitmap -> ShareCardManager.shareBitmap(context, bitmap) },
                 onFinish = {
                     if (activeSession != null) {
@@ -482,14 +508,7 @@ fun ActiveWorkoutScreen(
                                 }
                             } else {
                                 Button(
-                                    onClick = {
-                                        finalPlanName = activeSession?.name ?: "Freies Workout"
-                                        finalDuration = workoutDuration
-                                        if (!activeSession!!.isPaused) viewModel.toggleWorkoutPause(
-                                            context
-                                        )
-                                        showSummary = true
-                                    },
+                                    onClick = { showFinishDialog = true },
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(55.dp),
@@ -538,7 +557,6 @@ fun WorkoutSummaryView(
             m,
             s
         )
-
     var composeView by remember { mutableStateOf<ComposeView?>(null) }
 
     Column(
@@ -595,7 +613,6 @@ fun WorkoutSummaryView(
                 .height(60.dp),
             shape = RoundedCornerShape(28.dp)
         ) {
-            Icon(Icons.Default.Share, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text("WORKOUT TEILEN", fontWeight = FontWeight.Black, fontSize = 16.sp)
         }
@@ -628,27 +645,20 @@ fun WorkoutShareCard(
         modifier = Modifier
             .width(340.dp)
             .clip(MaterialTheme.shapes.large)
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1A1A1A),
-                        Color(0xFF0D0D0D)
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Default.EmojiEvents,
+                imageVector = Icons.Default.EmojiEvents,
                 contentDescription = null,
-                tint = Color(0xFF2196F3),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                "WORKOUT SUMMARY",
-                color = Color(0xFF2196F3),
+                text = "WORKOUT SUMMARY",
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp,
                 fontSize = 12.sp
@@ -658,8 +668,8 @@ fun WorkoutShareCard(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            planName.uppercase(),
-            color = Color.White,
+            text = planName.uppercase(),
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 26.sp,
             fontWeight = FontWeight.Black,
             lineHeight = 30.sp
@@ -667,7 +677,10 @@ fun WorkoutShareCard(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             StatItem(Icons.Default.Timer, "DAUER", duration)
             StatItem(Icons.Default.FitnessCenter, "WORKLOAD", "${totalVolume.toInt()} kg")
         }
@@ -675,8 +688,8 @@ fun WorkoutShareCard(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            "TOP ÜBUNGEN",
-            color = Color.White.copy(alpha = 0.6f),
+            text = "ÜBUNGS-ÜBERSICHT",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
@@ -690,20 +703,24 @@ fun WorkoutShareCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    exercise,
-                    color = Color.White,
+                    text = exercise,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                Text(details, color = Color(0xFF2196F3), fontWeight = FontWeight.Black)
+                Text(
+                    text = details,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Black
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            "GYM TRACKER",
-            color = Color.White.copy(alpha = 0.2f),
+            text = "GYM TRACKER",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
             fontWeight = FontWeight.Black,
             fontSize = 14.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -712,24 +729,29 @@ fun WorkoutShareCard(
 }
 
 @Composable
-fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.size(14.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
+fun StatItem(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
             Text(
-                label,
-                color = Color.White.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.labelSmall,
+                text = label,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
+            Text(
+                text = value,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black
+            )
         }
-        Text(value, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -805,7 +827,7 @@ fun WorkoutNoteSection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "NOTIZEN",
+                        "NOTIZEN & INFOS",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -913,7 +935,6 @@ fun EditableNoteBlock(
     var imageToDelete by remember { mutableStateOf<String?>(null) }
     var showDeleteNoteConfirm by remember { mutableStateOf(false) }
     var tempCameraUriString by remember { mutableStateOf<String?>(null) }
-
     val photoPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(5)) { uris ->
             if (uris.isNotEmpty()) {
@@ -938,7 +959,7 @@ fun EditableNoteBlock(
         AlertDialog(
             onDismissRequest = { imageToDelete = null },
             title = { Text("BILD LÖSCHEN?", fontWeight = FontWeight.Black) },
-            text = { Text("Soll dieses Bild aus der Notiz gelöscht werden?") },
+            text = { Text("Soll dieses Bild aus der Notiz entfernt werden?") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -985,7 +1006,7 @@ fun EditableNoteBlock(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp),
-                placeholder = { Text("Deine Notizen") }
+                placeholder = { Text("Deine Notizen (Tipp: Nutze - für Stichpunkte)") }
             )
 
             if (editImages.isNotEmpty()) {
@@ -1094,11 +1115,9 @@ fun EditableNoteBlock(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp)
-                    ) {
+                    Column(modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)) {
                         if (originalText.isNotBlank()) {
                             Text(originalText, style = MaterialTheme.typography.bodyLarge)
                             Spacer(modifier = Modifier.height(12.dp))

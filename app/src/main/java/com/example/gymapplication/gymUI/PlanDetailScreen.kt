@@ -151,7 +151,7 @@ fun PlanDetailScreen(
                         .fillMaxWidth()
                         .height(55.dp),
                     shape = MaterialTheme.shapes.medium
-                ) { Text("GERÄTE HINZUFÜGEN", fontWeight = FontWeight.Bold) }
+                ) { Text("ÜBUNG HINZUFÜGEN", fontWeight = FontWeight.Bold) }
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
                     "ÜBUNGEN IM PLAN",
@@ -320,10 +320,10 @@ fun PlanDetailScreen(
             var selectedEquipmentIds by remember { mutableStateOf(setOf<Int>()) }
             AlertDialog(
                 onDismissRequest = { showMultiSelectDialog = false },
-                title = { Text("GERÄTE AUSWÄHLEN", fontWeight = FontWeight.Black) },
+                title = { Text("ÜBUNG AUSWÄHLEN", fontWeight = FontWeight.Black) },
                 text = {
                     if (availableEquipment.isEmpty()) {
-                        Text("Du hast bereits alle deine Geräte in diesem Plan.")
+                        Text("Du hast bereits alle deine Übungen in diesem Plan.")
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxHeight(0.6f)) {
                             items(availableEquipment) { eq ->

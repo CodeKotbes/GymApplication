@@ -601,7 +601,12 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
 
     fun updateEquipmentNote(equipment: Equipment, note: String?, imageUris: String?) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.updateEquipment(equipment.copy(generalNote = note, generalNoteImageUris = imageUris))
+            dao.updateEquipment(
+                equipment.copy(
+                    generalNote = note,
+                    generalNoteImageUris = imageUris
+                )
+            )
         }
     }
 
@@ -671,7 +676,8 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = _activeSession.value?.sessionId ?: return@launch
-            val logs = dao.getLogsForSessionDirect(sessionId).filter { it.equipmentId == equipmentId }
+            val logs =
+                dao.getLogsForSessionDirect(sessionId).filter { it.equipmentId == equipmentId }
             logs.forEach { log ->
                 dao.updateLog(log.copy(sessionNote = note, sessionNoteImageUris = imageUris))
             }
@@ -680,14 +686,18 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
 
     fun updatePastSessionNote(sessionId: Int, equipmentId: Int, note: String?, imageUris: String?) {
         viewModelScope.launch(Dispatchers.IO) {
-            val logs = dao.getLogsForSessionDirect(sessionId).filter { it.equipmentId == equipmentId }
+            val logs =
+                dao.getLogsForSessionDirect(sessionId).filter { it.equipmentId == equipmentId }
             logs.forEach { log ->
                 dao.updateLog(log.copy(sessionNote = note, sessionNoteImageUris = imageUris))
             }
         }
     }
 
-    fun getLastSessionNote(equipmentId: Int, currentSessionId: Int?): kotlinx.coroutines.flow.Flow<Pair<String?, String?>?> {
+    fun getLastSessionNote(
+        equipmentId: Int,
+        currentSessionId: Int?
+    ): kotlinx.coroutines.flow.Flow<Pair<String?, String?>?> {
         return dao.getLogsForEquipment(equipmentId).map { logs ->
             val validLogs = logs.filter {
                 it.sessionId != currentSessionId &&
@@ -711,7 +721,8 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
             val currentSessionId = _activeSession.value?.sessionId
 
             val sessionLogs = if (currentSessionId != null) {
-                dao.getLogsForSessionDirect(currentSessionId).filter { it.equipmentId == equipmentId }
+                dao.getLogsForSessionDirect(currentSessionId)
+                    .filter { it.equipmentId == equipmentId }
             } else emptyList()
 
             val maxSetNumber = if (currentSessionId != null) {
@@ -858,13 +869,21 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
                         dao.insertWorkoutPlan(WorkoutPlan(name = planData.planName)).toInt()
 
                     planData.exercises.forEach { exercise ->
-                        val imagePath = exercise.imageFileName?.let { imageMap[it] }
+                        val mainImagePath = exercise.imageFileName?.let { imageMap[it] }
+
+                        val noteImagePaths =
+                            exercise.generalNoteImageFileNames?.split("|")?.mapNotNull { fileName ->
+                                imageMap[fileName]
+                            }?.joinToString("|")?.takeIf { it.isNotBlank() }
 
                         val newEquipment = Equipment(
                             name = exercise.name,
                             muscleGroup = exercise.muscleGroup,
-                            imageUri = imagePath
+                            imageUri = mainImagePath,
+                            generalNote = exercise.generalNote,
+                            generalNoteImageUris = noteImagePaths
                         )
+
                         val equipmentId = dao.insertEquipment(newEquipment).toInt()
 
                         dao.insertPlanExercise(
@@ -875,16 +894,24 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
                             )
                         )
                     }
+
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(
+                        android.widget.Toast.makeText(
                             context,
                             "Plan '${planData.planName}' importiert!",
-                            Toast.LENGTH_SHORT
+                            android.widget.Toast.LENGTH_SHORT
                         ).show()
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Fehler beim Import: ${e.localizedMessage}",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }
@@ -938,8 +965,17 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     private val _weightGoal = MutableStateFlow("Abnehmen")
     val weightGoal = _weightGoal.asStateFlow()
 
-    fun setWeightGoal(goal: String) {
+    fun loadWeightGoal(context: Context) {
+        val sharedPrefs = context.getSharedPreferences("gym_settings", Context.MODE_PRIVATE)
+        val savedGoal = sharedPrefs.getString("saved_weight_goal", "Abnehmen") ?: "Abnehmen"
+        _weightGoal.value = savedGoal
+    }
+
+    fun setWeightGoal(context: Context, goal: String) {
         _weightGoal.value = goal
+
+        val sharedPrefs = context.getSharedPreferences("gym_settings", Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString("saved_weight_goal", goal).apply()
     }
 
     fun getEquipmentTrend(equipmentId: Int) = dao.getLogsForEquipment(equipmentId).map { logs ->

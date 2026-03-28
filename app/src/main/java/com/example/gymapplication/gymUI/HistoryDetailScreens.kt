@@ -516,6 +516,8 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
     var showCompareDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(type) {
+        viewModel.loadWeightGoal(context)
+
         val savedTarget = sharedPrefs.getFloat("target_body_$type", -1f)
         if (savedTarget != -1f) targetValue = savedTarget
 
@@ -696,7 +698,7 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                             listOf("Abnehmen", "Zunehmen", "Halten").forEach { goal ->
                                 FilterChip(
                                     selected = currentGoal == goal,
-                                    onClick = { viewModel.setWeightGoal(goal) },
+                                    onClick = { viewModel.setWeightGoal(context, goal) },
                                     label = { Text(goal) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,

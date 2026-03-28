@@ -108,7 +108,7 @@ fun EquipmentScreen(viewModel: GymViewModel) {
         ) {
             item {
                 Text(
-                    "MEINE GERÄTE",
+                    "MEINE ÜBUNGEN",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Black
@@ -122,7 +122,7 @@ fun EquipmentScreen(viewModel: GymViewModel) {
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "GERÄT HINZUFÜGEN",
+                            "ÜBUNG HINZUFÜGEN",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -146,14 +146,14 @@ fun EquipmentScreen(viewModel: GymViewModel) {
                                             onValueChange = {
                                                 equipmentName = it; errorMessage = ""
                                             },
-                                            label = { Text("Gerät") },
+                                            label = { Text("Übung") },
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = MaterialTheme.shapes.medium
                                         )
                                         Button(
                                             onClick = {
                                                 if (equipmentName.isBlank()) errorMessage =
-                                                    "Gerät fehlt!" else step = 2
+                                                    "Übung fehlt!" else step = 2
                                             },
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -392,13 +392,13 @@ fun EquipmentScreen(viewModel: GymViewModel) {
         if (eqToEdit != null) {
             AlertDialog(
                 onDismissRequest = { eqToEditId = null },
-                title = { Text("GERÄT ANPASSEN", fontWeight = FontWeight.Black) },
+                title = { Text("ÜBUNG ANPASSEN", fontWeight = FontWeight.Black) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = editName,
                             onValueChange = { editName = it },
-                            label = { Text("Gerät") },
+                            label = { Text("Übung") },
                             shape = MaterialTheme.shapes.medium,
                             singleLine = true
                         )
@@ -474,8 +474,8 @@ fun EquipmentScreen(viewModel: GymViewModel) {
         if (eqToDelete != null) {
             AlertDialog(
                 onDismissRequest = { eqToDeleteId = null },
-                title = { Text("GERÄT LÖSCHEN?", fontWeight = FontWeight.Black) },
-                text = { Text("Möchtest du das Gerät '${eqToDelete.name}' wirklich löschen? Alle Aufzeichnungen zu diesem Gerät werden ebenfalls entfernt.") },
+                title = { Text("Übung LÖSCHEN?", fontWeight = FontWeight.Black) },
+                text = { Text("Möchtest du die Übung '${eqToDelete.name}' wirklich löschen? Alle Aufzeichnungen zu dieser Übung werden ebenfalls entfernt.") },
                 confirmButton = {
                     Button(
                         onClick = {

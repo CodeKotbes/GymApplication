@@ -374,7 +374,7 @@ fun WorkoutDiaryDetailScreen(session: WorkoutSession, viewModel: GymViewModel, o
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        val eqName = allEquipment.find { it.id == equipmentId }?.name ?: "Gerät"
+                        val eqName = allEquipment.find { it.id == equipmentId }?.name ?: "Übung"
                         Text(
                             eqName.uppercase(),
                             style = MaterialTheme.typography.titleMedium,

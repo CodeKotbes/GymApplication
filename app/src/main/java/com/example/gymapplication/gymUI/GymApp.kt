@@ -130,7 +130,7 @@ fun GymApp(viewModel: GymViewModel) {
                             tonalElevation = 8.dp
                         ) {
                             val tabs = listOf(
-                                Triple("equipment", "GERÄTE", Icons.Default.FitnessCenter),
+                                Triple("equipment", "ÜBUNGEN", Icons.Default.FitnessCenter),
                                 Triple("plans", "PLÄNE", Icons.Default.List),
                                 Triple("history", "FORTSCHRITT", Icons.Default.ShowChart),
                                 Triple("calendar", "KALENDER", Icons.Default.DateRange),
