@@ -12,7 +12,8 @@ data class Equipment(
     val muscleGroup: String,
     val imageUri: String?,
     val generalNote: String? = null,
-    val generalNoteImageUris: String? = null
+    val generalNoteImageUris: String? = null,
+    val targetValue: Float? = null
 )
 
 @Entity(tableName = "workout_plan_table")
@@ -39,6 +40,7 @@ data class WorkoutPlan(
     ],
     indices = [Index("planId"), Index("equipmentId")]
 )
+
 data class PlanExercise(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val planId: Int,
@@ -73,6 +75,7 @@ data class WorkoutSession(
     ],
     indices = [Index("equipmentId"), Index("sessionId")]
 )
+
 data class WorkoutLog(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val sessionId: Int? = null,
@@ -101,4 +104,49 @@ data class BodyMetric(
     val value: Float,
     val dateMillis: Long,
     val imageUri: String? = null
+)
+
+@Entity(tableName = "friends_table")
+data class Friend(
+    @PrimaryKey val userId: String,
+    val name: String,
+    val lastSyncMillis: Long,
+    val snapshotJson: String
+)
+
+@Entity(
+    tableName = "friend_exercise_mapping",
+    primaryKeys = ["friendUserId", "friendExerciseName"]
+)
+data class FriendExerciseMapping(
+    val friendUserId: String,
+    val friendExerciseName: String,
+    val myEquipmentId: Int
+)
+
+data class FriendExportData(
+    val v: Int = 1,
+    val uId: String,
+    val name: String,
+    val ts: Long,
+    val maxStrengthScore: Float,
+    val volume30d: Float,
+    val frequency30d: Int,
+    val progressionScore: Float,
+    val data: List<FriendExerciseExport>
+)
+
+data class FriendExerciseExport(
+    val n: String,
+    val m: String,
+    val prW: Float,
+    val prR: Int,
+    val prD: Long,
+    val v30: Float
+)
+
+@Entity(tableName = "body_targets")
+data class BodyTarget(
+    @PrimaryKey val type: String,
+    val targetValue: Float
 )

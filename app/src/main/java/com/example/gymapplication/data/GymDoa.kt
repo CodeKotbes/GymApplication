@@ -220,4 +220,40 @@ interface GymDao {
     """
     )
     fun getDailyVolumeStats(): Flow<List<DailyVolumeStat>>
+
+    @Query("SELECT * FROM friends_table ORDER BY lastSyncMillis DESC")
+    fun getAllFriends(): Flow<List<Friend>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFriend(friend: Friend)
+
+    @Delete
+    suspend fun deleteFriend(friend: Friend)
+
+    @Query("SELECT * FROM friend_exercise_mapping WHERE friendUserId = :friendId")
+    fun getMappingsForFriend(friendId: String): Flow<List<FriendExerciseMapping>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFriendMapping(mapping: FriendExerciseMapping)
+
+    @Query("SELECT SUM(weight * reps) FROM workout_log_table WHERE dateMillis >= :sinceMillis AND isCompleted = 1")
+    suspend fun getTotalVolumeDirect(sinceMillis: Long): Float?
+
+    @Query("SELECT COUNT(sessionId) FROM workout_sessions WHERE startTimeMillis >= :sinceMillis AND endTimeMillis IS NOT NULL")
+    suspend fun getWorkoutsCountDirect(sinceMillis: Long): Int
+
+    @Query("SELECT SUM(weight * reps) FROM workout_log_table WHERE dateMillis BETWEEN :startMillis AND :endMillis AND isCompleted = 1")
+    suspend fun getVolumeBetweenDirect(startMillis: Long, endMillis: Long): Float?
+
+    @Query("UPDATE equipment_table SET targetValue = :target WHERE id = :id")
+    suspend fun updateEquipmentTarget(id: Int, target: Float?)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBodyTarget(target: BodyTarget)
+
+    @Query("SELECT * FROM body_targets")
+    fun getAllBodyTargets(): kotlinx.coroutines.flow.Flow<List<BodyTarget>>
+
+    @Query("DELETE FROM body_targets WHERE type = :type")
+    suspend fun deleteBodyTarget(type: String)
 }

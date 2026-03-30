@@ -26,6 +26,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.gymapplication.gymUI.settings.HowToUseScreen
+import com.example.gymapplication.gymUI.calendar.CalendarScreen
+import com.example.gymapplication.gymUI.equipment.EquipmentScreen
+import com.example.gymapplication.gymUI.history.HistoryScreen
+import com.example.gymapplication.gymUI.plan.PlanScreen
+import com.example.gymapplication.gymUI.settings.SettingsScreen
+import com.example.gymapplication.gymUI.workout.ActiveWorkoutScreen
 import com.example.gymapplication.ui.theme.SmoothMcFitTheme
 import java.util.Locale
 

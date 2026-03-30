@@ -29,9 +29,17 @@ import com.example.gymapplication.data.BodyMetric
 import com.example.gymapplication.data.PlanExercise
 import com.example.gymapplication.data.PlannedWorkout
 import com.example.gymapplication.data.WorkoutPlan
+import com.example.gymapplication.gymUI.backup.BackupWorker
+import com.example.gymapplication.gymUI.backup.FullBackupManager
+import com.example.gymapplication.gymUI.plan.PlanImporter
+import com.example.gymapplication.gymUI.workout.WorkoutAlarmReceiver
+import com.example.gymapplication.gymUI.workout.WorkoutService
 import java.util.Calendar
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class PRItem(
     val equipmentName: String,
@@ -919,7 +927,7 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     fun createFullBackup(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                com.example.gymapplication.gymUI.FullBackupManager.createAndShareBackup(context)
+                FullBackupManager.createAndShareBackup(context)
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Backup wird vorbereitet...", Toast.LENGTH_SHORT).show()
@@ -940,7 +948,7 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     fun restoreFullBackup(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                com.example.gymapplication.gymUI.FullBackupManager.restoreBackup(context, uri)
+                FullBackupManager.restoreBackup(context, uri)
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
@@ -979,16 +987,14 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
     }
 
     fun getEquipmentTrend(equipmentId: Int) = dao.getLogsForEquipment(equipmentId).map { logs ->
-        val sorted = logs.sortedBy { it.dateMillis }
-        if (sorted.size >= 2) {
-            sorted.last().weight - sorted[sorted.size - 2].weight
+        if (logs.size >= 2) {
+            logs[0].weight - logs[1].weight
         } else null
     }
 
     fun getBodyMetricTrend(type: String) = dao.getMetricsByType(type).map { metrics ->
-        val sorted = metrics.sortedBy { it.dateMillis }
-        if (sorted.size >= 2) {
-            sorted.last().value - sorted[sorted.size - 2].value
+        if (metrics.size >= 2) {
+            metrics.last().value - metrics[metrics.size - 2].value
         } else null
     }
 
@@ -1001,6 +1007,248 @@ class GymViewModel(private val dao: GymDao) : ViewModel() {
             }
         }
     }
+
+    val friendsList = dao.getAllFriends()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun getMyUserId(context: Context): String {
+        val prefs = context.getSharedPreferences("gym_settings", Context.MODE_PRIVATE)
+        var uId = prefs.getString("my_user_id", null)
+        if (uId == null) {
+            uId = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("my_user_id", uId).apply()
+        }
+        return uId
+    }
+
+    fun generateFullExportJson(context: Context, myName: String, onResult: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val myId = getMyUserId(context)
+                val root = org.json.JSONObject()
+                root.put("v", 4) // Version 4
+                root.put("uId", myId)
+                root.put("name", myName.ifBlank { "Gym Bro" })
+                root.put("ts", System.currentTimeMillis())
+
+                val now = System.currentTimeMillis()
+                val thirtyDaysAgo = now - (30L * 24 * 60 * 60 * 1000)
+                val sixtyDaysAgo = now - (60L * 24 * 60 * 60 * 1000)
+
+                val freq30 = dao.getWorkoutsCountDirect(thirtyDaysAgo)
+                val vol30 = dao.getTotalVolumeDirect(thirtyDaysAgo) ?: 0f
+                val volPrev = dao.getVolumeBetweenDirect(sixtyDaysAgo, thirtyDaysAgo) ?: 0f
+                val prog = if (volPrev > 0) ((vol30 - volPrev) / volPrev) * 100 else 0f
+
+                val currentPRs = personalRecords.first()
+                val top3Strength = currentPRs.take(3).sumOf { it.maxWeight.toDouble() }.toFloat()
+
+                val statsObj = org.json.JSONObject()
+                statsObj.put("maxS", top3Strength.toDouble())
+                statsObj.put("vol", vol30.toDouble())
+                statsObj.put("freq", freq30)
+                statsObj.put("prog", prog.toDouble())
+                root.put("stats", statsObj)
+
+                val volumeStats = dailyVolumeStats.first()
+                val historyArray = org.json.JSONArray()
+                volumeStats.forEach { stat ->
+                    try {
+                        val date =
+                            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(stat.dateStr)
+                        if (date != null && date.time >= thirtyDaysAgo) {
+                            val pointObj = org.json.JSONObject()
+                            pointObj.put("d", date.time)
+                            pointObj.put("v", stat.totalVolume.toDouble())
+                            historyArray.put(pointObj)
+                        }
+                    } catch (e: Exception) {
+                    }
+                }
+                root.put("volHistory", historyArray)
+
+                val dataArray = org.json.JSONArray()
+                val currentEquipment = equipmentWithLatestLogs.first()
+
+                currentPRs.forEach { pr ->
+                    val eq = currentEquipment.find { it.name == pr.equipmentName }
+                    val item = org.json.JSONObject()
+                    item.put("n", pr.equipmentName)
+                    item.put("m", eq?.muscleGroup ?: "Unbekannt")
+                    item.put("prW", pr.maxWeight.toDouble())
+                    item.put("prR", pr.repsAtMaxWeight)
+                    item.put("prD", pr.dateOfMaxWeight)
+
+                    val exHistoryArray = org.json.JSONArray()
+                    if (eq != null) {
+                        val logs = dao.getLogsForEquipment(eq.id).first()
+                        val dailyMax = logs.groupBy {
+                            SimpleDateFormat(
+                                "yyyy-MM-dd",
+                                Locale.getDefault()
+                            ).format(Date(it.dateMillis))
+                        }.mapNotNull { (_, dayLogs) ->
+                            val maxLog = dayLogs.maxByOrNull { it.weight }
+                            if (maxLog != null) {
+                                val logObj = org.json.JSONObject()
+                                logObj.put("d", maxLog.dateMillis)
+                                logObj.put("w", maxLog.weight.toDouble())
+                                logObj
+                            } else null
+                        }
+                        dailyMax.forEach { exHistoryArray.put(it) }
+                    }
+                    item.put("h", exHistoryArray)
+                    dataArray.put(item)
+                }
+                root.put("data", dataArray)
+
+                val muscleStatsList = detailedMuscleStats.first()
+                val muscleArray = org.json.JSONArray()
+                muscleStatsList.forEach { stat ->
+                    val obj = org.json.JSONObject()
+                    obj.put("m", stat.muscleGroup)
+                    obj.put("e", stat.equipmentName)
+                    obj.put("s", stat.totalSets)
+                    muscleArray.put(obj)
+                }
+                root.put("muscleStatsArr", muscleArray)
+
+                withContext(Dispatchers.Main) { onResult(root.toString()) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { onResult("") }
+            }
+        }
+    }
+
+    fun importFriendFromFile(context: Context, uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val jsonString = inputStream?.bufferedReader().use { it?.readText() } ?: ""
+
+                val root = org.json.JSONObject(jsonString)
+                val baseUId = root.getString("uId")
+                val name = root.getString("name")
+                val ts = root.getLong("ts")
+
+                if (baseUId == getMyUserId(context)) {
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Das ist deine eigene Datei!",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@launch
+                }
+
+                val uniqueUserId = "${baseUId}_$ts"
+
+                val friend = com.example.gymapplication.data.Friend(
+                    userId = uniqueUserId,
+                    name = name,
+                    lastSyncMillis = ts,
+                    snapshotJson = jsonString
+                )
+                dao.insertFriend(friend)
+
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "$name erfolgreich importiert!",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Fehler beim Lesen der Datei.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+    fun deleteFriend(friend: com.example.gymapplication.data.Friend) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteFriend(friend)
+        }
+    }
+
+    fun getFriendMappingsFlow(friendId: String) = dao.getMappingsForFriend(friendId)
+
+    fun saveFriendMapping(friendId: String, friendExName: String, myEqId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertFriendMapping(
+                com.example.gymapplication.data.FriendExerciseMapping(
+                    friendUserId = friendId,
+                    friendExerciseName = friendExName,
+                    myEquipmentId = myEqId
+                )
+            )
+        }
+    }
+
+    fun removeFriendMapping(friendId: String, friendExName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+        }
+    }
+
+    data class GlobalStats(
+        val maxStrengthScore: Float,
+        val volume30d: Float,
+        val frequency30d: Int,
+        val progressionScore: Float
+    )
+
+    val myGlobalStats = kotlinx.coroutines.flow.combine(
+        dao.getAllFinishedSessions(),
+        personalRecords
+    ) { _, prs ->
+        val now = System.currentTimeMillis()
+        val thirtyDaysAgo = now - (30L * 24 * 60 * 60 * 1000)
+        val sixtyDaysAgo = now - (60L * 24 * 60 * 60 * 1000)
+
+        val freq30 = dao.getWorkoutsCountDirect(thirtyDaysAgo)
+        val vol30 = dao.getTotalVolumeDirect(thirtyDaysAgo) ?: 0f
+        val volPreviousMonth = dao.getVolumeBetweenDirect(sixtyDaysAgo, thirtyDaysAgo) ?: 0f
+        val progression =
+            if (volPreviousMonth > 0) ((vol30 - volPreviousMonth) / volPreviousMonth) * 100 else 0f
+        val top3Strength = prs.take(3).sumOf { it.maxWeight.toDouble() }.toFloat()
+
+        GlobalStats(
+            maxStrengthScore = top3Strength,
+            volume30d = vol30,
+            frequency30d = freq30,
+            progressionScore = progression
+        )
+    }.stateIn(
+        viewModelScope,
+        kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        GlobalStats(0f, 0f, 0, 0f) // Initialer leerer State
+    )
+
+    val bodyTargets = dao.getAllBodyTargets()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun saveBodyTarget(type: String, value: Float?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (value == null) dao.deleteBodyTarget(type)
+            else dao.insertBodyTarget(com.example.gymapplication.data.BodyTarget(type, value))
+        }
+    }
+
+    fun saveEquipmentTarget(id: Int, value: Float?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.updateEquipmentTarget(id, value)
+        }
+    }
+
 }
 
 class GymViewModelFactory(private val dao: GymDao) : ViewModelProvider.Factory {

@@ -1,0 +1,171 @@
+package com.example.gymapplication.gymUI.backup
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
+import android.widget.Toast
+import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
+import com.example.gymapplication.data.GymDatabase
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+object FullBackupManager {
+    private const val BACKUP_FILE_NAME = "GymApp_FullBackup.gymbackup"
+    private const val AUTO_BACKUP_PREFIX = "GymApp_Auto_"
+
+    fun createAndShareBackup(context: Context) {
+        val appContext = context.applicationContext
+        val backupFile = File(appContext.cacheDir, BACKUP_FILE_NAME)
+
+        try {
+            performBackupToStream(appContext, FileOutputStream(backupFile))
+            val uri = FileProvider.getUriForFile(
+                appContext,
+                "${appContext.packageName}.fileprovider",
+                backupFile
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            appContext.startActivity(
+                Intent.createChooser(intent, "Backup sichern...")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun createAutoBackup(context: Context, folderUriString: String): Boolean {
+        return try {
+            val folderUri = Uri.parse(folderUriString)
+            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return false
+
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
+            val fileName = "$AUTO_BACKUP_PREFIX$timestamp.gymbackup"
+
+            val newFile = folder.createFile("application/octet-stream", fileName) ?: return false
+
+            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
+                performBackupToStream(context, outputStream)
+            }
+
+            rotateBackups(folder)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private fun performBackupToStream(context: Context, outputStream: OutputStream) {
+        ZipOutputStream(outputStream).use { zos ->
+            val dbFile = context.getDatabasePath("gym_database")
+            listOf(dbFile, File(dbFile.path + "-shm"), File(dbFile.path + "-wal")).forEach { file ->
+                if (file.exists()) addToZip(file, "database/${file.name}", zos)
+            }
+
+            context.filesDir.listFiles()?.forEach { file ->
+                if (file.isFile && (file.name.endsWith(".jpg") || file.name.endsWith(".png"))) {
+                    addToZip(file, "images/${file.name}", zos)
+                }
+            }
+
+            val sharedPrefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
+            if (sharedPrefsDir.exists()) {
+                sharedPrefsDir.listFiles()?.forEach { file ->
+                    addToZip(file, "prefs/${file.name}", zos)
+                }
+            }
+        }
+    }
+
+    private fun rotateBackups(folder: DocumentFile) {
+        val backups = folder.listFiles()
+            .filter { it.name?.startsWith(AUTO_BACKUP_PREFIX) == true }
+            .sortedByDescending { it.lastModified() }
+
+        if (backups.size > 5) {
+            backups.drop(5).forEach { it.delete() }
+        }
+    }
+
+    private fun addToZip(file: File, zipPath: String, zos: ZipOutputStream) {
+        val entry = ZipEntry(zipPath)
+        zos.putNextEntry(entry)
+        FileInputStream(file).use { fis -> fis.copyTo(zos) }
+        zos.closeEntry()
+    }
+
+    fun restoreBackup(context: Context, uri: Uri) {
+        try {
+            GymDatabase.getDatabase(context).close()
+
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                ZipInputStream(inputStream).use { zis ->
+                    var entry = zis.nextEntry
+                    while (entry != null) {
+                        if (entry.isDirectory) {
+                            zis.closeEntry()
+                            entry = zis.nextEntry
+                            continue
+                        }
+
+                        val pureFileName = entry.name.substringAfterLast("/")
+
+                        val targetFile = when {
+                            entry.name.startsWith("database/") -> context.getDatabasePath(
+                                pureFileName
+                            )
+
+                            entry.name.startsWith("images/") -> File(context.filesDir, pureFileName)
+                            entry.name.startsWith("prefs/") -> File(
+                                context.applicationInfo.dataDir,
+                                "shared_prefs/$pureFileName"
+                            )
+
+                            else -> null
+                        }
+
+                        targetFile?.let { file ->
+                            file.parentFile?.mkdirs()
+                            if (file.exists()) file.delete()
+                            FileOutputStream(file).use { fos -> zis.copyTo(fos) }
+                        }
+
+                        zis.closeEntry()
+                        entry = zis.nextEntry
+                    }
+                }
+            }
+
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Backup importiert! App startet neu...", Toast.LENGTH_LONG)
+                    .show()
+                Handler(Looper.getMainLooper()).postDelayed({
+                    Process.killProcess(Process.myPid())
+                    System.exit(0)
+                }, 1500)
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
+        }
+    }
+}
