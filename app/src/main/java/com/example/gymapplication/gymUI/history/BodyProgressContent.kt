@@ -26,7 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.getBodyMetricTrend
+import com.example.gymapplication.gymUI.viewmodel.getBodyMetrics
 import java.util.Locale
 
 @Composable

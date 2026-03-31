@@ -25,12 +25,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,9 +60,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.gymapplication.data.Friend
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.analysis.GraphDataPoint
 import com.example.gymapplication.gymUI.analysis.PremiumDonutChart
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.deleteFriendMapping
+import com.example.gymapplication.gymUI.viewmodel.getFriendMappingsFlow
+import com.example.gymapplication.gymUI.viewmodel.saveFriendMapping
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -213,9 +221,11 @@ fun FriendDuelScreen(friend: Friend, viewModel: GymViewModel, onBack: () -> Unit
         Color(0xFFF43F5E), Color(0xFF14B8A6), Color(0xFFF97316)
     )
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(
@@ -564,23 +574,98 @@ fun FriendDuelScreen(friend: Friend, viewModel: GymViewModel, onBack: () -> Unit
                     val myWeight = myPr?.maxWeight ?: 0f
                     val myReps = myPr?.repsAtMaxWeight ?: 0
 
+                    var showMenu by remember { mutableStateOf(false) }
+
                     Card(
-                        modifier = Modifier.fillMaxWidth().let { mod ->
-                            if (myEq != null) mod.clickable {
-                                selectedCompareExercise = Pair(fEx, myEq.id)
-                            } else mod
-                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { mod ->
+                                if (myEq != null) mod.clickable {
+                                    selectedCompareExercise = Pair(fEx, myEq.id)
+                                } else mod
+                            },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         shape = MaterialTheme.shapes.large
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            Text(
-                                (myEq?.name ?: fEx.name).uppercase(),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    (myEq?.name ?: fEx.name).uppercase(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Box {
+                                    IconButton(
+                                        onClick = { showMenu = true },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.MoreVert,
+                                            contentDescription = "Optionen"
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false },
+                                        shape = MaterialTheme.shapes.medium,
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    "Neu verknüpfen",
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.Edit,
+                                                    contentDescription = "Bearbeiten",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            onClick = {
+                                                showMenu = false
+                                                exerciseToMap = fEx
+                                            }
+                                        )
+
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 12.dp),
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                        )
+
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    "Verknüpfung aufheben",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.LinkOff,
+                                                    contentDescription = "Aufheben",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            onClick = {
+                                                showMenu = false
+                                                viewModel.deleteFriendMapping(baseUserId, fEx.name)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(20.dp))
                             val myColor = MaterialTheme.colorScheme.primary
                             val friendColor = Color(0xFFF97316)
@@ -591,13 +676,13 @@ fun FriendDuelScreen(friend: Friend, viewModel: GymViewModel, onBack: () -> Unit
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "Du",
+                                    "DU",
                                     color = myColor,
                                     fontWeight = FontWeight.Black,
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
-                                    friend.name,
+                                    friend.name.uppercase(),
                                     color = friendColor,
                                     fontWeight = FontWeight.Black,
                                     style = MaterialTheme.typography.titleMedium
@@ -693,9 +778,11 @@ fun FriendDuelScreen(friend: Friend, viewModel: GymViewModel, onBack: () -> Unit
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 12.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 12.dp)
+                            ) {
                                 Text(
                                     fEx.name,
                                     style = MaterialTheme.typography.titleMedium,
@@ -824,9 +911,11 @@ fun FriendDuelScreen(friend: Friend, viewModel: GymViewModel, onBack: () -> Unit
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                Column(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,

@@ -338,10 +338,12 @@ fun AnalysisEfficiencyGraph(
 
     Row(modifier = modifier.padding(vertical = 16.dp)) {
 
-        Canvas(modifier = Modifier
-            .width(45.dp)
-            .fillMaxHeight()
-            .padding(end = 4.dp)) {
+        Canvas(
+            modifier = Modifier
+                .width(45.dp)
+                .fillMaxHeight()
+                .padding(end = 4.dp)
+        ) {
             val graphHeight = size.height - 60f
             if (graphHeight <= 0) return@Canvas
             bwSteps.forEach { value ->
@@ -520,10 +522,12 @@ fun AnalysisEfficiencyGraph(
             }
         }
 
-        Canvas(modifier = Modifier
-            .width(45.dp)
-            .fillMaxHeight()
-            .padding(start = 4.dp)) {
+        Canvas(
+            modifier = Modifier
+                .width(45.dp)
+                .fillMaxHeight()
+                .padding(start = 4.dp)
+        ) {
             val graphHeight = size.height - 60f
             if (graphHeight <= 0) return@Canvas
             strSteps.forEach { value ->

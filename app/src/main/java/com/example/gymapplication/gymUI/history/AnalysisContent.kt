@@ -40,13 +40,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.analysis.AnalysisEfficiencyGraph
 import com.example.gymapplication.gymUI.analysis.AnalysisFullscreenEfficiencyDialog
 import com.example.gymapplication.gymUI.analysis.AnalysisFullscreenWorkloadDialog
 import com.example.gymapplication.gymUI.analysis.AnalysisWorkloadGraph
 import com.example.gymapplication.gymUI.analysis.GraphDataPoint
 import com.example.gymapplication.gymUI.analysis.PremiumDonutChart
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.getBodyMetrics
+import com.example.gymapplication.gymUI.viewmodel.getLogsFlow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -198,9 +200,11 @@ fun AnalysisContent(
                             val percentage = (total.toFloat() / totalSetsOverall) * 100
                             val groupColor = pieColors[index % pieColors.size]
 
-                            Column(modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

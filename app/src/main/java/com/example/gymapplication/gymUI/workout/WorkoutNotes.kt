@@ -34,7 +34,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.getLastSessionNote
+import com.example.gymapplication.gymUI.viewmodel.updateActiveSessionNote
+import com.example.gymapplication.gymUI.viewmodel.updateEquipmentNote
 
 @Composable
 fun WorkoutNoteSection(
@@ -396,9 +399,11 @@ fun EditableNoteBlock(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
+                    ) {
                         if (originalText.isNotBlank()) {
                             Text(originalText, style = MaterialTheme.typography.bodyLarge)
                             Spacer(modifier = Modifier.height(12.dp))

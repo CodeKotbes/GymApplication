@@ -61,7 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.gymapplication.data.Equipment
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.updateEquipmentNote
 import java.io.File
 import kotlin.collections.plus
 
@@ -296,9 +297,11 @@ fun EquipmentGeneralNoteCard(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 8.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 8.dp)
+                            ) {
                                 if (originalText.isNotBlank()) {
                                     Text(originalText, style = MaterialTheme.typography.bodyLarge)
                                     Spacer(modifier = Modifier.height(12.dp))

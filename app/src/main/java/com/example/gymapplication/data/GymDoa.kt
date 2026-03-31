@@ -256,4 +256,7 @@ interface GymDao {
 
     @Query("DELETE FROM body_targets WHERE type = :type")
     suspend fun deleteBodyTarget(type: String)
+
+    @Query("DELETE FROM friend_exercise_mapping WHERE friendUserId = :friendUserId AND friendExerciseName = :friendExerciseName")
+    suspend fun deleteFriendMapping(friendUserId: String, friendExerciseName: String)
 }

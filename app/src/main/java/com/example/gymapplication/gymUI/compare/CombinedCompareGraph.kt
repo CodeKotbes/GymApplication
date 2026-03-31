@@ -112,10 +112,12 @@ fun CombinedCompareGraph(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(myColor))
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(myColor)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     myName.uppercase(),
@@ -125,10 +127,12 @@ fun CombinedCompareGraph(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(friendColor))
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(friendColor)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     friendName.uppercase(),
@@ -140,10 +144,12 @@ fun CombinedCompareGraph(
         }
 
         Row(modifier = Modifier.weight(1f)) {
-            Canvas(modifier = Modifier
-                .width(55.dp)
-                .fillMaxHeight()
-                .padding(end = 8.dp)) {
+            Canvas(
+                modifier = Modifier
+                    .width(55.dp)
+                    .fillMaxHeight()
+                    .padding(end = 8.dp)
+            ) {
                 val graphHeight = size.height - 60f
                 if (graphHeight <= 0) return@Canvas
 

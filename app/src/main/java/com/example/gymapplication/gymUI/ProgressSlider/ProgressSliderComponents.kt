@@ -139,9 +139,11 @@ fun InteractiveProgressSlider(
             )
         }
 
-        Column(modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+        ) {
             Text(
                 dateFormat.format(Date(beforeDateMillis)),
                 color = Color.White.copy(alpha = 0.8f),

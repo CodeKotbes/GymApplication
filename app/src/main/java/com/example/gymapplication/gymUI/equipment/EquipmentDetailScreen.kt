@@ -65,9 +65,13 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.gymapplication.data.Equipment
 import com.example.gymapplication.data.WorkoutLog
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.workout.PastSessionNoteCard
 import com.example.gymapplication.gymUI.SharedComponents.ZoomableImageDialog
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.deleteWorkoutLog
+import com.example.gymapplication.gymUI.viewmodel.getLogsFlow
+import com.example.gymapplication.gymUI.viewmodel.saveWorkoutLog
+import com.example.gymapplication.gymUI.viewmodel.updateWorkoutLog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

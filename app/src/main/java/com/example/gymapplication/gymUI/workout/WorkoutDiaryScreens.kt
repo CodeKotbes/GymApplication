@@ -43,7 +43,11 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.gymapplication.data.WorkoutSession
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.deleteWorkoutSession
+import com.example.gymapplication.gymUI.viewmodel.getLogsForSessionFlow
+import com.example.gymapplication.gymUI.viewmodel.updatePastSessionNote
+import com.example.gymapplication.gymUI.viewmodel.updateWorkoutSessionDate
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -437,7 +441,7 @@ fun PastSessionNoteCard(
     var editImages by rememberSaveable(sessionId, equipmentId) { mutableStateOf(originalImages) }
     var imageToDelete by remember { mutableStateOf<String?>(null) }
     var showDeleteNoteConfirm by remember { mutableStateOf(false) }
-    var tempCameraUriString by remember { mutableStateOf<String?>(null) }
+    var tempCameraUriString by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(originalText, originalImages) {
         if (!isEditing) {

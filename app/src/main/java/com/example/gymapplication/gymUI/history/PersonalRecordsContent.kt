@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,9 +69,11 @@ fun PersonalRecordsContent(viewModel: GymViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
+                    ) {
                         Text(
                             pr.equipmentName.uppercase(),
                             style = MaterialTheme.typography.titleMedium,

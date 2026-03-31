@@ -34,9 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.compare.FriendDuelScreen
 import com.example.gymapplication.gymUI.compare.FriendsCompareContent
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -92,9 +92,11 @@ fun HistoryScreen(viewModel: GymViewModel) {
         return
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         Text(
             "MEIN FORTSCHRITT",
             style = MaterialTheme.typography.headlineMedium,

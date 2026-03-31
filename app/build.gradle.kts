@@ -55,8 +55,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
-    implementation("com.google.zxing:core:3.5.3")
-    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.work.runtime.ktx)
     ksp(libs.room.compiler)

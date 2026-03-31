@@ -20,7 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.createFullBackup
+import com.example.gymapplication.gymUI.viewmodel.restoreFullBackup
+import com.example.gymapplication.gymUI.viewmodel.updateBackupSchedule
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)

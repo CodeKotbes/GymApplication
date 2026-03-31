@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -53,11 +52,16 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.gymapplication.data.Equipment
 import com.example.gymapplication.data.WorkoutLog
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.analysis.FullscreenGraphDialog
 import com.example.gymapplication.gymUI.analysis.GenericGraph
 import com.example.gymapplication.gymUI.analysis.GraphDataPoint
 import com.example.gymapplication.gymUI.analysis.HistoryZoomDialog
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.deleteWorkoutLog
+import com.example.gymapplication.gymUI.viewmodel.getLogsFlow
+import com.example.gymapplication.gymUI.viewmodel.saveEquipmentTarget
+import com.example.gymapplication.gymUI.viewmodel.updateWorkoutLog
+import androidx.compose.foundation.lazy.items
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

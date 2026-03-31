@@ -22,7 +22,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.createWorkoutPlan
+import com.example.gymapplication.gymUI.viewmodel.deleteWorkoutPlan
+import com.example.gymapplication.gymUI.viewmodel.importPlan
+import com.example.gymapplication.gymUI.viewmodel.updateWorkoutPlanName
 import com.example.gymapplication.gymUI.workout.WorkoutDiaryScreen
 
 @Composable
@@ -247,6 +251,40 @@ fun PlanScreen(viewModel: GymViewModel, navController: NavController) {
                 }
             }
             item { Spacer(modifier = Modifier.height(120.dp)) }
+        }
+
+        if (planToEdit != null) {
+            AlertDialog(
+                onDismissRequest = { planToEditId = null },
+                title = { Text("PLAN UMBENENNEN", fontWeight = FontWeight.Black) },
+                text = {
+                    OutlinedTextField(
+                        value = editPlanName,
+                        onValueChange = { editPlanName = it },
+                        label = { Text("Neuer Planname") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (editPlanName.isNotBlank()) {
+                                keyboardController?.hide()
+                                viewModel.updateWorkoutPlanName(planToEdit, editPlanName)
+                                planToEditId = null
+                            }
+                        },
+                        shape = MaterialTheme.shapes.medium
+                    ) { Text("SPEICHERN") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        planToEditId = null
+                    }) { Text("ABBRECHEN") }
+                }
+            )
         }
 
         if (planToDelete != null) {

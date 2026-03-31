@@ -31,7 +31,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.gymapplication.data.Equipment
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.getEquipmentTrend
+import com.example.gymapplication.gymUI.viewmodel.getLogsFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,8 +59,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.example.gymapplication.data.Friend
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.analysis.GraphDataPoint
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.deleteFriend
+import com.example.gymapplication.gymUI.viewmodel.generateFullExportJson
+import com.example.gymapplication.gymUI.viewmodel.importFriendFromFile
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -373,9 +375,11 @@ fun FriendGlobalComparisonHeader(
         val myPrefix = if (isPercentage && myValue > 0) "+" else ""
         val friendPrefix = if (isPercentage && friendValue > 0) "+" else ""
 
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -401,10 +405,12 @@ fun FriendGlobalComparisonHeader(
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .height(14.dp)
-                .clip(CircleShape)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .clip(CircleShape)
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()

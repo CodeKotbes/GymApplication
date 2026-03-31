@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -25,15 +27,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import java.util.Locale
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.example.gymapplication.gymUI.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
 import com.example.gymapplication.gymUI.analysis.HistoryZoomDialog
-import com.example.gymapplication.gymUI.workout.ShareCardManager
-import kotlin.collections.component1
-import kotlin.collections.component2
+import com.example.gymapplication.gymUI.viewmodel.adjustRestTime
+import com.example.gymapplication.gymUI.viewmodel.consumeSummaryEvent
+import com.example.gymapplication.gymUI.viewmodel.finishWorkout
+import com.example.gymapplication.gymUI.viewmodel.getEquipmentWithLogsForPlanFlow
+import com.example.gymapplication.gymUI.viewmodel.getLatestLogForEquipment
+import com.example.gymapplication.gymUI.viewmodel.getLogsForSessionFlow
+import com.example.gymapplication.gymUI.viewmodel.saveWorkoutLog
+import com.example.gymapplication.gymUI.viewmodel.skipRest
+import com.example.gymapplication.gymUI.viewmodel.startRestTimer
+import com.example.gymapplication.gymUI.viewmodel.toggleWorkoutPause
+import com.example.gymapplication.gymUI.viewmodel.updateExerciseIndex
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,10 +215,6 @@ fun ActiveWorkoutScreen(
                 return@Scaffold
             }
 
-            val currentEquipment = equipmentInPlan[currentIndex]
-            val ghostValue by viewModel.getLatestLogForEquipment(currentEquipment.id)
-                .collectAsState(initial = null)
-
             AnimatedContent(targetState = isResting, label = "WorkoutView") { resting ->
                 if (resting) {
                     Column(
@@ -269,326 +272,357 @@ fun ActiveWorkoutScreen(
                         }
                     }
                 } else {
-                    Column(
+                    val pagerState = rememberPagerState(
+                        initialPage = currentIndex,
+                        pageCount = { equipmentInPlan.size }
+                    )
+                    val coroutineScope = rememberCoroutineScope()
+
+                    LaunchedEffect(pagerState) {
+                        snapshotFlow { pagerState.currentPage }.collect { page ->
+                            if (currentIndex != page) {
+                                viewModel.updateExerciseIndex(page)
+                            }
+                        }
+                    }
+
+                    LaunchedEffect(currentIndex) {
+                        if (pagerState.currentPage != currentIndex) {
+                            pagerState.animateScrollToPage(currentIndex)
+                        }
+                    }
+
+                    HorizontalPager(
+                        state = pagerState,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (currentEquipment.imageUri != null) {
-                                AsyncImage(
-                                    model = currentEquipment.imageUri, contentDescription = null,
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .clickable {
-                                            fullscreenImageUri = currentEquipment.imageUri
-                                        },
-                                    contentScale = ContentScale.Crop
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
+                    ) { page ->
+                        val targetEquipment = equipmentInPlan[page]
+                        val ghostValue by viewModel.getLatestLogForEquipment(targetEquipment.id)
+                            .collectAsState(initial = null)
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (targetEquipment.imageUri != null) {
+                                    AsyncImage(
+                                        model = targetEquipment.imageUri, contentDescription = null,
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(MaterialTheme.shapes.medium)
+                                            .clickable {
+                                                fullscreenImageUri = targetEquipment.imageUri
+                                            },
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                }
+                                Column {
+                                    Text(
+                                        "ÜBUNG ${page + 1} VON ${equipmentInPlan.size}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        targetEquipment.name.uppercase(),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
                             }
-                            Column {
-                                Text(
-                                    "ÜBUNG ${currentIndex + 1} VON ${equipmentInPlan.size}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    currentEquipment.name.uppercase(),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
-                        }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                            Spacer(modifier = Modifier.height(32.dp))
 
-                        key(currentIndex) {
-                            var weightInput by rememberSaveable(currentIndex) {
-                                mutableStateOf(
-                                    currentEquipment.latestWeight?.toString() ?: ""
-                                )
-                            }
-                            var repsInput by rememberSaveable(currentIndex) {
-                                mutableStateOf(
-                                    currentEquipment.latestReps?.toString() ?: ""
-                                )
-                            }
-                            var isWarmup by rememberSaveable(currentIndex) { mutableStateOf(false) }
-                            val currentPR =
-                                personalRecords.find { it.equipmentName == currentEquipment.name }
-                            val prWeight = currentPR?.maxWeight ?: 0f
-                            val prReps = currentPR?.repsAtMaxWeight ?: 0
+                            key(page) {
+                                var weightInput by rememberSaveable(page) {
+                                    mutableStateOf(targetEquipment.latestWeight?.toString() ?: "")
+                                }
+                                var repsInput by rememberSaveable(page) {
+                                    mutableStateOf(targetEquipment.latestReps?.toString() ?: "")
+                                }
+                                var isWarmup by rememberSaveable(page) { mutableStateOf(false) }
+                                val currentPR =
+                                    personalRecords.find { it.equipmentName == targetEquipment.name }
+                                val prWeight = currentPR?.maxWeight ?: 0f
+                                val prReps = currentPR?.repsAtMaxWeight ?: 0
 
-                            val inputWeight = weightInput.replace(",", ".").toFloatOrNull() ?: 0f
-                            val inputReps = repsInput.toIntOrNull() ?: 0
+                                val inputWeight =
+                                    weightInput.replace(",", ".").toFloatOrNull() ?: 0f
+                                val inputReps = repsInput.toIntOrNull() ?: 0
 
-                            val prMessage: String?
-                            val isNewPR: Boolean
+                                val prMessage: String?
+                                val isNewPR: Boolean
 
-                            if (prWeight == 0f && inputWeight > 0 && inputReps > 0) {
-                                prMessage = "Dein erster Rekord für diese Übung!"
-                                isNewPR = true
-                            } else if (inputWeight > 0f) {
-                                if (inputWeight > prWeight) {
-                                    prMessage =
-                                        if (inputReps > 0) "NEUER GEWICHTS-REKORD!" else "Das wäre ein neuer Gewichts-Rekord!"
-                                    isNewPR = inputReps > 0
-                                } else if (inputWeight == prWeight) {
-                                    when {
-                                        inputReps == prReps - 1 -> {
-                                            prMessage = "Nur noch 1 Rep für den Rekord!"
-                                            isNewPR = false
+                                if (prWeight == 0f && inputWeight > 0 && inputReps > 0) {
+                                    prMessage = "Dein erster Rekord für diese Übung!"
+                                    isNewPR = true
+                                } else if (inputWeight > 0f) {
+                                    if (inputWeight > prWeight) {
+                                        prMessage =
+                                            if (inputReps > 0) "NEUER GEWICHTS-REKORD!" else "Das wäre ein neuer Gewichts-Rekord!"
+                                        isNewPR = inputReps > 0
+                                    } else if (inputWeight == prWeight) {
+                                        when {
+                                            inputReps == prReps - 1 -> {
+                                                prMessage = "Nur noch 1 Rep für den Rekord!"
+                                                isNewPR = false
+                                            }
+
+                                            inputReps == prReps -> {
+                                                prMessage = "Rekord eingestellt!"
+                                                isNewPR = false
+                                            }
+
+                                            inputReps > prReps -> {
+                                                prMessage = "NEUER REP-REKORD!"
+                                                isNewPR = true
+                                            }
+
+                                            else -> {
+                                                prMessage = "Aktueller PR: $prWeight kg x $prReps"
+                                                isNewPR = false
+                                            }
                                         }
-
-                                        inputReps == prReps -> {
-                                            prMessage = "Rekord eingestellt!"
-                                            isNewPR = false
-                                        }
-
-                                        inputReps > prReps -> {
-                                            prMessage = "NEUER REP-REKORD!"
-                                            isNewPR = true
-                                        }
-
-                                        else -> {
-                                            prMessage = "Aktueller PR: $prWeight kg x $prReps"
-                                            isNewPR = false
-                                        }
+                                    } else {
+                                        prMessage = null
+                                        isNewPR = false
                                     }
                                 } else {
                                     prMessage = null
                                     isNewPR = false
                                 }
-                            } else {
-                                prMessage = null
-                                isNewPR = false
-                            }
 
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                shape = MaterialTheme.shapes.large
-                            ) {
-                                Column(modifier = Modifier.padding(24.dp)) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 16.dp)
-                                    ) {
-                                        Checkbox(
-                                            checked = isWarmup,
-                                            onCheckedChange = { isWarmup = it })
-                                        Text(
-                                            "Aufwärmsatz",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-
-                                    ghostValue?.let { ghost ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    shape = MaterialTheme.shapes.large
+                                ) {
+                                    Column(modifier = Modifier.padding(24.dp)) {
                                         Row(
+                                            verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 4.dp, vertical = 4.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                .padding(bottom = 16.dp)
                                         ) {
+                                            Checkbox(
+                                                checked = isWarmup,
+                                                onCheckedChange = { isWarmup = it })
                                             Text(
-                                                "ZULETZT: ${ghost.weight} kg",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.4f
-                                                ),
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                "${ghost.reps} REPS",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.4f
-                                                ),
-                                                fontWeight = FontWeight.Bold
+                                                "Aufwärmsatz",
+                                                style = MaterialTheme.typography.bodyMedium
                                             )
                                         }
-                                    }
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
-                                        OutlinedTextField(
-                                            value = weightInput,
-                                            onValueChange = { weightInput = it },
-                                            label = { Text("Gewicht (kg)") },
-                                            modifier = Modifier.weight(1f),
-                                            placeholder = {
+                                        ghostValue?.let { ghost ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
                                                 Text(
-                                                    ghostValue?.weight?.toString() ?: "0.0"
+                                                    "ZULETZT: ${ghost.weight} kg",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(
+                                                        alpha = 0.4f
+                                                    ),
+                                                    fontWeight = FontWeight.Bold
                                                 )
-                                            },
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Decimal,
-                                                imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                                            ),
-                                            singleLine = true,
-                                            enabled = !isWarmup
-                                        )
-                                        OutlinedTextField(
-                                            value = repsInput,
-                                            onValueChange = { repsInput = it },
-                                            label = { Text("Wiederholungen") },
-                                            modifier = Modifier.weight(1f),
-                                            placeholder = {
                                                 Text(
-                                                    ghostValue?.reps?.toString() ?: "0"
+                                                    "${ghost.reps} REPS",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(
+                                                        alpha = 0.4f
+                                                    ),
+                                                    fontWeight = FontWeight.Bold
                                                 )
-                                            },
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Number,
-                                                imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                                            ),
-                                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                                                onDone = { keyboardController?.hide() }),
-                                            singleLine = true,
-                                            enabled = !isWarmup
-                                        )
-                                    }
+                                            }
+                                        }
 
-                                    AnimatedVisibility(
-                                        visible = prMessage != null && !isWarmup,
-                                        enter = fadeIn() + expandVertically(),
-                                        exit = fadeOut() + shrinkVertically()
-                                    ) {
-                                        Text(
-                                            text = prMessage ?: "",
-                                            color = if (isNewPR) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontWeight = if (isNewPR) FontWeight.Black else FontWeight.Bold,
-                                            modifier = Modifier
-                                                .padding(top = 16.dp, bottom = 4.dp)
-                                                .fillMaxWidth(),
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = weightInput,
+                                                onValueChange = { weightInput = it },
+                                                label = { Text("Gewicht (kg)") },
+                                                modifier = Modifier.weight(1f),
+                                                placeholder = {
+                                                    Text(ghostValue?.weight?.toString() ?: "0.0")
+                                                },
+                                                keyboardOptions = KeyboardOptions(
+                                                    keyboardType = KeyboardType.Decimal,
+                                                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                                                ),
+                                                singleLine = true,
+                                                enabled = !isWarmup
+                                            )
+                                            OutlinedTextField(
+                                                value = repsInput,
+                                                onValueChange = { repsInput = it },
+                                                label = { Text("Wiederholungen") },
+                                                modifier = Modifier.weight(1f),
+                                                placeholder = {
+                                                    Text(ghostValue?.reps?.toString() ?: "0")
+                                                },
+                                                keyboardOptions = KeyboardOptions(
+                                                    keyboardType = KeyboardType.Number,
+                                                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                                                ),
+                                                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                                    onDone = { keyboardController?.hide() }),
+                                                singleLine = true,
+                                                enabled = !isWarmup
+                                            )
+                                        }
 
-                                    Spacer(modifier = Modifier.height(24.dp))
+                                        AnimatedVisibility(
+                                            visible = prMessage != null && !isWarmup,
+                                            enter = fadeIn() + expandVertically(),
+                                            exit = fadeOut() + shrinkVertically()
+                                        ) {
+                                            Text(
+                                                text = prMessage ?: "",
+                                                color = if (isNewPR) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = if (isNewPR) FontWeight.Black else FontWeight.Bold,
+                                                modifier = Modifier
+                                                    .padding(top = 16.dp, bottom = 4.dp)
+                                                    .fillMaxWidth(),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
 
-                                    Button(
-                                        onClick = {
-                                            keyboardController?.hide()
-                                            if (isWarmup) {
-                                                viewModel.startRestTimer(context, defaultRestTime)
-                                            } else {
-                                                val w =
-                                                    weightInput.replace(",", ".").toFloatOrNull()
-                                                val r = repsInput.toIntOrNull()
-                                                if (w != null && r != null) {
-                                                    if (isNewPR) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "Neuer Rekord gespeichert!",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                    }
+                                        Spacer(modifier = Modifier.height(24.dp))
 
-                                                    viewModel.saveWorkoutLog(
-                                                        currentEquipment.id,
-                                                        w,
-                                                        r,
-                                                        1
-                                                    )
+                                        Button(
+                                            onClick = {
+                                                keyboardController?.hide()
+                                                if (isWarmup) {
                                                     viewModel.startRestTimer(
                                                         context,
                                                         defaultRestTime
                                                     )
+                                                } else {
+                                                    val w = weightInput.replace(",", ".")
+                                                        .toFloatOrNull()
+                                                    val r = repsInput.toIntOrNull()
+                                                    if (w != null && r != null) {
+                                                        if (isNewPR) {
+                                                            Toast.makeText(
+                                                                context,
+                                                                "Neuer Rekord gespeichert!",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                        viewModel.saveWorkoutLog(
+                                                            targetEquipment.id,
+                                                            w,
+                                                            r,
+                                                            1
+                                                        )
+                                                        viewModel.startRestTimer(
+                                                            context,
+                                                            defaultRestTime
+                                                        )
+                                                    }
                                                 }
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(65.dp),
+                                            shape = MaterialTheme.shapes.medium,
+                                            enabled = isWarmup || (weightInput.isNotBlank() && repsInput.isNotBlank())
+                                        ) {
+                                            Text(
+                                                if (isWarmup) "WARMUP BEENDEN" else "SATZ BEENDEN",
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                WorkoutNoteSection(
+                                    equipmentId = targetEquipment.id,
+                                    viewModel = viewModel,
+                                    activeSessionId = activeSession!!.sessionId,
+                                    onImageClick = { fullscreenImageUri = it })
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 24.dp, bottom = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (page > 0) {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(page - 1)
+                                            }
+                                        }
+                                    },
+                                    enabled = page > 0,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(55.dp)
+                                ) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("ZURÜCK")
+                                }
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                if (page < equipmentInPlan.size - 1) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(page + 1)
                                             }
                                         },
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(65.dp),
-                                        shape = MaterialTheme.shapes.medium,
-                                        enabled = isWarmup || (weightInput.isNotBlank() && repsInput.isNotBlank())
+                                            .weight(1f)
+                                            .height(55.dp)
+                                    ) {
+                                        Text("NÄCHSTE")
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(Icons.Default.ArrowForward, contentDescription = null)
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = { showFinishDialog = true },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(55.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                     ) {
                                         Text(
-                                            if (isWarmup) "WARMUP BEENDEN" else "SATZ BEENDEN",
-                                            fontWeight = FontWeight.Bold
+                                            "BEENDEN",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimary
                                         )
                                     }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            WorkoutNoteSection(
-                                equipmentId = currentEquipment.id,
-                                viewModel = viewModel,
-                                activeSessionId = activeSession!!.sessionId,
-                                onImageClick = { fullscreenImageUri = it })
+                            Spacer(modifier = Modifier.height(350.dp))
                         }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 24.dp, bottom = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    if (currentIndex > 0) viewModel.updateExerciseIndex(
-                                        currentIndex - 1
-                                    )
-                                },
-                                enabled = currentIndex > 0,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(55.dp)
-                            ) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("ZURÜCK")
-                            }
-
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            if (currentIndex < equipmentInPlan.size - 1) {
-                                OutlinedButton(
-                                    onClick = { viewModel.updateExerciseIndex(currentIndex + 1) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(55.dp)
-                                ) {
-                                    Text("NÄCHSTE")
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(Icons.Default.ArrowForward, contentDescription = null)
-                                }
-                            } else {
-                                Button(
-                                    onClick = { showFinishDialog = true },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(55.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                                ) {
-                                    Text(
-                                        "BEENDEN",
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(350.dp))
                     }
                 }
             }

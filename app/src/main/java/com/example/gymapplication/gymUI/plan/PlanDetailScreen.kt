@@ -62,8 +62,13 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.gymapplication.data.Equipment
 import com.example.gymapplication.data.WorkoutPlan
-import com.example.gymapplication.gymUI.GymViewModel
 import com.example.gymapplication.gymUI.history.HistoryDetailScreen
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.addMultipleEquipmentToPlan
+import com.example.gymapplication.gymUI.viewmodel.getEquipmentWithLogsForPlanFlow
+import com.example.gymapplication.gymUI.viewmodel.removeEquipmentFromPlan
+import com.example.gymapplication.gymUI.viewmodel.reorderEquipmentInPlan
+import com.example.gymapplication.gymUI.viewmodel.startWorkout
 import java.util.Locale
 
 @Composable

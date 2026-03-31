@@ -17,7 +17,8 @@ object ShareCardManager {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             stream.close()
 
-            val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val contentUri =
+                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"

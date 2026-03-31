@@ -83,31 +83,31 @@ fun HowToUseScreen(
                     GuideSection(
                         icon = Icons.Default.FitnessCenter,
                         title = "1. Übungen",
-                        text = "Erstelle Übungen und ordne sie Muskelgruppen zu. Du kannst eigene Bilder hochladen, zoomen und jederzeit alles bearbeiten."
+                        text = "In diesem Tab verwaltest du deinen individuellen Übungskatalog und ordnest jede Einheit einer Muskelgruppe zu. Eine integrierte Validierung verhindert leere Pflichtfelder, übernimmt jedoch exakte Zeichenfolgen inklusive Leerzeichen. Dies gewährleistet maximale Datenintegrität für Vergleiche oder die Muskel-Balance-Analyse, erfordert jedoch eine konsistente Namensgebung durch den Nutzer, um Redundanzen (z. B. 'Latzug' und 'Latzug   ') zu vermeiden. Zur besseren Orientierung am Gerät können optional Bilder via Kamera oder Galerie hinzugefügt und in der Detailansicht vergrößert werden.\n\nÜber das Drei-Punkte-Menü lassen sich Übungen jederzeit bearbeiten oder löschen. Die Detailansicht bietet zudem ein duales Notizsystem: Nutze 'Allgemeine Notizen' für bebilderte Ausführungsanleitungen und getrennte 'Trainings-Notizen' für sessionbasiertes Feedback (z. B. Fokus auf Technik). Fortschritte können manuell mit Sätzen, Wiederholungen und Gewicht geloggt oder automatisch über den Workout-Modus erfasst werden. Die Historie ermöglicht es, vergangene Einheiten einzusehen, das Datum anzupassen oder Einträge nachträglich zu korrigieren oder zu löschen."
                     )
 
                     GuideSection(
                         icon = Icons.Default.PlayCircle,
-                        title = "2. Live-Workouts",
-                        text = "Starte Pläne mit festen Pausenzeiten. Während des Trainings siehst du deine letzten Sätze als 'Ghost-Werte'. Der Timer läuft im Hintergrund weiter wenn du die App verlässt."
+                        title = "2. Trainingspläne & Live-Workout-Modus",
+                        text = "Dieser Tab kombiniert die strategische Planung mit einer hochflexiblen Workout-Execution. Erstelle individuelle Trainingspläne mit Pflichtvalidierung oder importiere bestehende Setups über die Import-Funktion. Deine Pläne lassen sich dynamisch organisieren: Füge Übungen aus deinem Katalog hinzu und bestimme die Reihenfolge durch intuitive Neupositionierung, wobei nachfolgende Übungen automatisch verschoben werden. Innerhalb der Plan-Ansicht erhältst du zudem Einblick in deine spezifische Leistungsentwicklung.\n\nDer Workout-Modus startet mit einer definierbaren Pausenzeit (Standard: 2 Min.) und bietet maximale Unterstützung während des Satzes: Erfasse Gewicht und Wiederholungen mit direktem Vergleich zu deinen 'Ghost-Werten' (letzte Einheit) und erhalte sofortiges Feedback bei neuen persönlichen Rekorden. Markiere Aufwärmsätze, um deine Statistik sauber zu halten. Das integrierte Notiz-Management erlaubt den Zugriff auf drei Ebenen: Aktuelle Session-Notizen (editierbar), Notizen der letzten Einheit (Read-only) und allgemeine Übungshinweise (editierbar). Navigiere flüssig per Button oder Swipe zwischen den Übungen.\n\nDer intelligente Rest-Timer läuft im Hintergrund weiter, bietet haptisches Feedback (Vibration) und lässt sich jederzeit manuell anpassen. Dank des 'Live-Buttons' kannst du die App während des Trainings verlassen oder Übungen sogar während der laufenden Einheit hinzufügen. Bei vollständigem Schließen der App pausiert das Training automatisch. Nach Abschluss generiert das System eine Sharecard für deine Erfolge. Deine Historie bleibt jederzeit editierbar, inklusive nachträglicher Datumsanpassung und detaillierter Einsicht in alle Notizen und Parameter."
                     )
 
                     GuideSection(
                         icon = Icons.Default.ShowChart,
-                        title = "3. Fortschritt & Rekorde",
-                        text = "Tracke dein Körpergewicht, Umfänge und deine Gewichte von den Übungen. Die App berechnet deine Bestleistungen, dein theoretisches 1 Rep Max (1RM) und stellt dir Analysen deiner Übungen zusammen."
+                        title = "3. Fortschritt, Analyse & Vergleich",
+                        text = "Dieser Bereich ist dein Analysezentrum, unterteilt in fünf spezialisierte Sub-Tabs (per Swipe oder Tap erreichbar):\n\n1. Körperwerte & Gewichte: Verwalte Gewicht und Umfänge in dedizierten Dashboards. Definiere Ziele (Zunehmen/Halten/Abnehmen), verfolge deinen Fortschritt per Fortschrittsbalken und analysiere Entwicklungen über interaktive, zoombare Graphen. Ein visuelles Highlight ist die Vergleichsfunktion für Fortschrittsbilder.\n\n2. Rekorde: Dein digitaler Trophäenschrank. Hier werden Bestleistungen (Max-Gewicht/Wiederholungen) inklusive Datum und deinem theoretischen 1-Rep-Max (1RM) für jede Übung gelistet.\n\n3. Analyse-Hub: Erhalte tiefe Einblicke in dein Training durch die Auswertung des Gesamtvolumens und der 'Muskel-Balance'. Ein Kreisdiagramm visualisiert die Belastungsverteilung der letzten 30 Tage – bis hinunter auf Übungsebene. Der 'Efficiency Factor' setzt zudem dein Körpergewicht in Relation zu deiner Maximalkraft.\n\n4. Social-Vergleich: Miss dich mit Freunden durch Daten-Import/Export. Das System nutzt einen intelligenten Zeit-Sync, um faire Vergleiche auf Basis aktueller Daten zu gewährleisten. Vergleiche deinen 'Max-Kraft Score' (Top 3 PRs), den 'Workload-Check' (30-Tage-Volumen), die Workout-Frequenz und den monatlichen Progression-Trend.\n\n5. Smart Matching: Da keine starren IDs genutzt werden, ermöglicht die App ein flexibles Mapping deiner Übungen mit denen deiner Freunde (automatisch via Name/Muskelgruppe oder manuell), um detaillierte Vergleichsgraphen und direkte Gegenüberstellungen aller Trainingseinträge zu erstellen."
                     )
 
                     GuideSection(
                         icon = Icons.Default.Event,
-                        title = "4. Kalender & Planung",
-                        text = "Plane Workouts für die Zukunft. Die App erinnert dich am Trainingstag per Benachrichtigung. Ein Tipp auf den Kalendereintrag bringt dich direkt zum Start oder zu den Details."
+                        title = "4. Trainingskalender",
+                        text = "Der integrierte Kalender dient als deine strategische Kommandozentrale für die Trainingssteuerung. Plane zukünftige Sessions, indem du einen deiner erstellten Pläne auswählst und eine spezifische Uhrzeit für die Push-Benachrichtigung festlegst. Visuelle Markierungen (Punkte) im Kalender geben dir sofortigen Aufschluss über anstehende und vergangene Einheiten.\n\nNach Abschluss eines Workouts wird die tatsächliche Trainingsdauer direkt im Kalender erfasst. Ein Klick auf einen Eintrag führt dich entweder zu den Details der absolvierten Einheit oder zur Vorbereitung deines geplanten Trainings. Da die App zwischen verbindlicher Planung und tatsächlicher Ausführung unterscheidet, bleiben zukünftige Einträge als Zielsetzung bestehen, auch wenn du eine Einheit außerplanmäßig an einem anderen Tag absolvierst. So behältst du die volle Kontrolle über dein manuelles Planungs-Management und kannst verpasste oder verschobene Einheiten flexibel organisieren."
                     )
 
                     GuideSection(
                         icon = Icons.Default.CloudDone,
-                        title = "5. Backup & Sicherheit",
-                        text = "Deine Daten liegen 100% lokal. Nutze die Backup-Funktion in den Optionen, um deine Fortschritte (z.B. in Google Drive) zu sichern."
+                        title = "5. Optionen, Backup & Personalisierung",
+                        text = "In diesem Tab passt du die App an deine Bedürfnisse an und sicherst deine wertvollen Trainingsdaten. Neben dieser Funktionsübersicht findest du hier die 'Neuigkeiten', welche dich über Updates und neue Features auf dem Laufenden halten. Personalisiere das Interface durch den Wechsel zwischen Dark- und Light-Mode für eine optimale Lesbarkeit in jeder Umgebung.\n\nDas Herzstück der Optionen ist das intelligente Backup-System: Konfiguriere automatische Sicherungen in einem frei wählbaren Verzeichnis (lokal oder Cloud-synchronisiert) auf täglicher oder wöchentlicher Basis zu deiner Wunschuhrzeit. Um Speicherplatz zu sparen, nutzt die App ein Rotationsprinzip, das maximal fünf Sicherungsstände vorhält und ältere Dateien automatisch überschreibt. Ein wichtiger technischer Hinweis: Die Ausführung erfolgt zeitoptimiert durch das Android-Betriebssystem. Um den Akku zu schonen und den Tiefschlaf des Geräts zu fördern, werden Hintergrundaufgaben gebündelt, weshalb die Sicherung leicht zeitversetzt zum geplanten Zeitpunkt erfolgen kann. Zusätzlich hast du jederzeit die volle Kontrolle über manuelle Exporte und die Wiederherstellung deiner Daten über die Import-Funktion."
                     )
 
                     Card(
@@ -138,6 +138,18 @@ fun HowToUseScreen(
                     }
 
                 } else {
+                    UpdateNote(
+                        version = "Version 1.2.1",
+                        date = "31.03.2026",
+                        description = "Stabilitäts- & UX-Update: Optimierte Navigation, Benachrichtigungen und umfassende Guides.",
+                        features = listOf(
+                            "NEU: Deep-Dive Guide – Die gesamte Funktionsweise der App wurde für einen Einstieg detailliert aufbereitet.",
+                            "Navigation: Ab sofort kannst du im aktiven Workout-Modus intuitiv per Swipe zwischen den Übungen wechseln.",
+                            "System: Grundlegende Überarbeitung der Benachrichtigungs-Logik für noch zuverlässigere Trainings-Erinnerungen.",
+                            "Stabilität: Kritischer Bugfix im Kameramodul – die Aufnahme von Übungs- und Progress-Bildern läuft nun fehlerfrei.",
+                            "Sicherheit: Erfolgreiche Validierung und Optimierung der Backup-Routine zur Gewährleistung maximaler Datensicherheit.",
+                        )
+                    )
                     UpdateNote(
                         version = "Version 1.2",
                         date = "30.03.2026",

@@ -12,8 +12,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.gymapplication.data.GymDatabase
 import com.example.gymapplication.gymUI.GymApp
-import com.example.gymapplication.gymUI.GymViewModel
-import com.example.gymapplication.gymUI.GymViewModelFactory
+import com.example.gymapplication.gymUI.viewmodel.GymViewModel
+import com.example.gymapplication.gymUI.viewmodel.GymViewModelFactory
+import com.example.gymapplication.gymUI.viewmodel.updateBackupSchedule
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,9 +34,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val database = GymDatabase.getDatabase(this) //
+        val database = GymDatabase.getDatabase(this)
         val viewModel: GymViewModel by viewModels {
-            GymViewModelFactory(database.gymDao()) //
+            GymViewModelFactory(database.gymDao())
         }
 
         viewModel.updateBackupSchedule(this)
