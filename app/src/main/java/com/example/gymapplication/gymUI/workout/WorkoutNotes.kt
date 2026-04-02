@@ -5,13 +5,13 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,21 +24,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
-import java.io.File
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import com.example.gymapplication.gymUI.viewmodel.GymViewModel
 import com.example.gymapplication.gymUI.viewmodel.getLastSessionNote
 import com.example.gymapplication.gymUI.viewmodel.updateActiveSessionNote
 import com.example.gymapplication.gymUI.viewmodel.updateEquipmentNote
+import java.io.File
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutNoteSection(
     equipmentId: Int,
@@ -46,7 +48,7 @@ fun WorkoutNoteSection(
     activeSessionId: Int,
     onImageClick: (String) -> Unit
 ) {
-    var expanded by rememberSaveable(equipmentId) { mutableStateOf(false) }
+    var showBottomSheet by rememberSaveable(equipmentId) { mutableStateOf(false) }
     var selectedTab by rememberSaveable(equipmentId) { mutableIntStateOf(0) }
     val tabs = listOf("AKTUELL", "LETZTES", "ALLGEMEIN")
     val draftNotes by viewModel.activeSessionNotes.collectAsState()
@@ -86,52 +88,64 @@ fun WorkoutNoteSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(),
+            .clickable { showBottomSheet = true },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                alpha = 0.5f
-            )
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         shape = MaterialTheme.shapes.large
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "NOTIZEN & INFOS",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null
+                    Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "NOTIZEN & INFOS",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = "Öffnen"
+            )
+        }
+    }
 
-            if (expanded) {
-                Spacer(modifier = Modifier.height(16.dp))
+    if (showBottomSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(
+                        bottom = WindowInsets.navigationBars.asPaddingValues()
+                            .calculateBottomPadding() + 16.dp
+                    )
+            ) {
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
                     indicator = { tabPositions ->
                         TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(
-                                tabPositions[selectedTab]
-                            ), color = MaterialTheme.colorScheme.primary
+                            Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                            color = MaterialTheme.colorScheme.primary
                         )
                     },
                     divider = {}
@@ -144,6 +158,7 @@ fun WorkoutNoteSection(
                         )
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (selectedTab) {
@@ -157,11 +172,7 @@ fun WorkoutNoteSection(
                         originalText = initialCurrentText,
                         originalImages = initialCurrentImages,
                         onSave = { txt, imgs ->
-                            viewModel.updateActiveSessionNote(
-                                equipmentId,
-                                txt,
-                                imgs
-                            )
+                            viewModel.updateActiveSessionNote(equipmentId, txt, imgs)
                         },
                         onImageClick = onImageClick
                     )
@@ -185,11 +196,7 @@ fun WorkoutNoteSection(
                                 originalText = initialGeneralText,
                                 originalImages = initialGeneralImages,
                                 onSave = { txt, imgs ->
-                                    viewModel.updateEquipmentNote(
-                                        equipment,
-                                        txt,
-                                        imgs
-                                    )
+                                    viewModel.updateEquipmentNote(equipment, txt, imgs)
                                 },
                                 onImageClick = onImageClick
                             )
@@ -219,6 +226,7 @@ fun EditableNoteBlock(
     var imageToDelete by remember { mutableStateOf<String?>(null) }
     var showDeleteNoteConfirm by remember { mutableStateOf(false) }
     var tempCameraUriString by remember { mutableStateOf<String?>(null) }
+
     val photoPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(5)) { uris ->
             if (uris.isNotEmpty()) {
@@ -275,9 +283,7 @@ fun EditableNoteBlock(
                 ) { Text("LÖSCHEN") }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showDeleteNoteConfirm = false
-                }) { Text("ABBRECHEN") }
+                TextButton(onClick = { showDeleteNoteConfirm = false }) { Text("ABBRECHEN") }
             }
         )
     }
@@ -327,11 +333,7 @@ fun EditableNoteBlock(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(onClick = {
-                        photoPicker.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
+                        photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }) {
                         Icon(
                             Icons.Default.AddPhotoAlternate,
@@ -368,7 +370,7 @@ fun EditableNoteBlock(
                         onEditChange(false)
                         onTextChange(originalText)
                         onImagesChange(originalImages)
-                    }) { Text("ABBRECHEN") }
+                    }) { Text("ABBR.") }
 
                     Button(onClick = {
                         val finalNote = editText.takeIf { it.isNotBlank() }
@@ -405,7 +407,10 @@ fun EditableNoteBlock(
                             .padding(end = 8.dp)
                     ) {
                         if (originalText.isNotBlank()) {
-                            Text(originalText, style = MaterialTheme.typography.bodyLarge)
+                            LinkifiedText(
+                                text = originalText,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
@@ -431,12 +436,10 @@ fun EditableNoteBlock(
                                 },
                                 onClick = { showMenu = false; onEditChange(true) }
                             )
-
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 12.dp),
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                             )
-
                             DropdownMenuItem(
                                 text = {
                                     Text(
@@ -501,7 +504,7 @@ fun ReadOnlyNoteBlock(
     } else {
         Column(modifier = Modifier.padding(vertical = 8.dp)) {
             if (!noteText.isNullOrBlank()) {
-                Text(noteText, style = MaterialTheme.typography.bodyLarge)
+                LinkifiedText(text = noteText, style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(12.dp))
             }
             val images = imageUrisString?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
@@ -522,4 +525,60 @@ fun ReadOnlyNoteBlock(
             }
         }
     }
+}
+
+@Composable
+fun LinkifiedText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = LocalTextStyle.current
+) {
+    val uriHandler = LocalUriHandler.current
+    val linkColor = MaterialTheme.colorScheme.primary
+
+    val annotatedString = buildAnnotatedString {
+        val urlPattern =
+            "(?i)\\b(?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\((?:[^\\s()<>]+|\\([^\\s()<>]+\\))*\\))+(?:\\((?:[^\\s()<>]+|\\([^\\s()<>]+\\))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«»“”‘’])".toRegex()
+        var lastIndex = 0
+
+        urlPattern.findAll(text).forEach { matchResult ->
+            append(text.substring(lastIndex, matchResult.range.first))
+
+            val url = matchResult.value
+            pushStringAnnotation(tag = "URL", annotation = url)
+            withStyle(
+                style = SpanStyle(
+                    color = linkColor,
+                    textDecoration = TextDecoration.Underline,
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(url)
+            }
+            pop()
+            lastIndex = matchResult.range.last + 1
+        }
+        append(text.substring(lastIndex))
+    }
+
+    ClickableText(
+        text = annotatedString,
+        modifier = modifier,
+        style = style.copy(color = MaterialTheme.colorScheme.onSurface),
+        onClick = { offset ->
+            annotatedString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                .firstOrNull()?.let { annotation ->
+                    val urlToOpen =
+                        if (!annotation.item.startsWith("http://") && !annotation.item.startsWith("https://")) {
+                            "https://${annotation.item}"
+                        } else {
+                            annotation.item
+                        }
+                    try {
+                        uriHandler.openUri(urlToOpen)
+                    } catch (e: Exception) {
+                    }
+                }
+        }
+    )
 }

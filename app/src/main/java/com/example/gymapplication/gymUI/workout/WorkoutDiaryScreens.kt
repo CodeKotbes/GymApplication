@@ -666,7 +666,10 @@ fun PastSessionNoteCard(
                                     .padding(end = 8.dp)
                             ) {
                                 if (originalText.isNotBlank()) {
-                                    Text(originalText, style = MaterialTheme.typography.bodyMedium)
+                                    LinkifiedText(
+                                        text = originalText,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
