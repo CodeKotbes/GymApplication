@@ -1,7 +1,6 @@
 package com.example.gymapplication.gymUI.history
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -92,6 +91,8 @@ import com.example.gymapplication.gymUI.viewmodel.loadWeightGoal
 import com.example.gymapplication.gymUI.viewmodel.saveBodyTarget
 import com.example.gymapplication.gymUI.viewmodel.setWeightGoal
 import com.example.gymapplication.gymUI.viewmodel.updateBodyMetric
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -129,14 +130,12 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
     var showFullscreenGraph by rememberSaveable { mutableStateOf(false) }
     var tempCameraUriString by rememberSaveable { mutableStateOf<String?>(null) }
     val tempCameraUri = tempCameraUriString?.let { Uri.parse(it) }
+
     val photoPickerLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
             if (uri != null) {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                selectedImageUri = uri
+                val permanentUri = copyUriToInternalStorage(context, uri)
+                selectedImageUri = permanentUri
             }
         }
 
@@ -755,5 +754,24 @@ fun BodyDetailScreen(type: String, unit: String, viewModel: GymViewModel, onBack
                 }) { Text("ABBRECHEN") }
             }
         )
+    }
+}
+
+fun copyUriToInternalStorage(context: Context, uri: Uri): Uri? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val fileName = "BODY_PROGRESS_${System.currentTimeMillis()}.jpg"
+        val file = File(context.filesDir, fileName)
+        val outputStream = FileOutputStream(file)
+
+        inputStream.copyTo(outputStream)
+
+        inputStream.close()
+        outputStream.close()
+
+        Uri.fromFile(file)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }
